@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Basic</title>
+    <script type="application/javascript">
+        var firstPostion = null;
+        var prevPosition = null;
+
+        function draw() {
+            var canvas = document.getElementById('viewport');
+
+            if (canvas.getContext) {
+                var ctx = canvas.getContext('2d');
+                var img = new Image();
+
+                img.src = "./resources/images/42041.jpg";
+                img.onload = function () {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                }
+
+                canvas.addEventListener('mousedown', getMousePosition, false);
+            }
+        }
+
+        function getMousePosition(event)
+        {
+            var x = event.x;
+            var y = event.y;
+
+            var canvas = document.getElementById('viewport');
+
+            x -= canvas.offsetLeft;
+            y -= canvas.offsetTop;
+
+            var ctx = canvas.getContext('2d');
+            //ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = 'rgba(255,255,255, 0.3)';
+            ctx.strokeStyle = 'rgb(255,20,20)';
+
+            if (prevPosition !== null) {
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.moveTo(prevPosition.x, prevPosition.y);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+
+            ctx.setLineDash([]);
+            ctx.lineWidth = 2;
+            ctx.fillRect(x - 2, y - 2, 4, 4);
+            ctx.strokeRect(x - 2, y - 2, 4, 4);
+
+            prevPosition = {
+                x: x,
+                y: y
+            };
+        }
+    </script>
+</head>
+<body onload="draw()">
+<canvas id="viewport"></canvas>
+</body>
+</html>

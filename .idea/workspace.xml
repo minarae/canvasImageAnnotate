@@ -2,22 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0c498dba-87ca-4d79-9d37-2d584f3af4eb" name="Default" comment="">
-      <change beforePath="" afterPath="$PROJECT_DIR$/.idea/vcs.xml" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change beforePath="$PROJECT_DIR$/canvas/arc.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/canvas/basic.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/canvas/bezier.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/canvas/combinations.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/canvas/fillStyle.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/canvas/rect.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/canvasArea.html" afterPath="$PROJECT_DIR$/canvasArea.html" />
-      <change beforePath="$PROJECT_DIR$/canvasTest.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/index.html" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/resources/js/imageCrop/jquery.imagecrop.css" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/resources/js/imageCrop/jquery.imagecrop.js" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/resources/js/imageCrop/outline.gif" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/resources/js/jquery.canvasArea.v0.9.js" afterPath="" />
-      <change beforePath="$PROJECT_DIR$/resources/js/jquery.canvasAreaDraw.js" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/20151025143140_s__647172-1_edit.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/2dd21635e1e1796f43523f3e0ab03272.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/42041.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/42041_alt4.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/600.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/E5147_GY7551_m.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/PS14011500070.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/PS16100700173.jpg" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/htm_20161116710032373.JPG" afterPath="" />
+      <change beforePath="$PROJECT_DIR$/resources/images/htm_20161116793951148.jpg" afterPath="" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -66,8 +61,8 @@
       <file leaf-file-name="canvasArea.html" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/canvasArea.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="183">
-              <caret line="22" column="8" lean-forward="true" selection-start-line="22" selection-start-column="8" selection-end-line="22" selection-end-column="8" />
+            <state relative-caret-position="513">
+              <caret line="27" column="32" lean-forward="true" selection-start-line="27" selection-start-column="32" selection-end-line="27" selection-end-column="32" />
               <folding />
             </state>
           </provider>
@@ -165,6 +160,12 @@
               <item name="canvasImageAnnotate" type="2a2b976b:PhpTreeStructureProvider$1" />
               <item name="resources" type="2a2b976b:PhpTreeStructureProvider$1" />
             </path>
+            <path>
+              <item name="canvasImageAnnotate" type="b2602c69:ProjectViewProjectNode" />
+              <item name="canvasImageAnnotate" type="2a2b976b:PhpTreeStructureProvider$1" />
+              <item name="resources" type="2a2b976b:PhpTreeStructureProvider$1" />
+              <item name="images" type="2a2b976b:PhpTreeStructureProvider$1" />
+            </path>
           </expand>
           <select />
         </subPane>
@@ -220,12 +221,12 @@
       <workItem from="1519084948645" duration="1399000" />
       <workItem from="1519265010046" duration="78518000" />
       <workItem from="1519950612528" duration="48192000" />
-      <workItem from="1520313348152" duration="717000" />
+      <workItem from="1520313348152" duration="864000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="138786000" />
+    <option name="totallyTimeSpent" value="138933000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1989" y="40" width="1530" height="1021" extended-state="0" />
@@ -634,8 +635,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/canvasArea.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="183">
-          <caret line="22" column="8" lean-forward="true" selection-start-line="22" selection-start-column="8" selection-end-line="22" selection-end-column="8" />
+        <state relative-caret-position="513">
+          <caret line="27" column="32" lean-forward="true" selection-start-line="27" selection-start-column="32" selection-end-line="27" selection-end-column="32" />
           <folding />
         </state>
       </provider>

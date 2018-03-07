@@ -33,6 +33,7 @@
             allowSelect: true,
             allowGapSize: 2,
             allowZoom: false,
+            zoomSize: 200,
             defaultColor: '#ff961e',
             onCreated: null,
             onSelected: null,
@@ -105,7 +106,7 @@
         window.addEventListener('keyup', _unsetKeyDown);
 
         if (this.options.allowZoom === true) {
-            this.zoomLayer = $('<div>').addClass('zoom-area');
+            this.zoomLayer = $('<div>').addClass('zoom-area').css('width', this.options.zoomSize).css('height', this.options.zoomSize);
             $(oObj).parent().append(this.zoomLayer);
 
             this.zoomCanvas = $('<canvas>').addClass('zoom-canvas');
@@ -618,12 +619,13 @@
             }
 
             // zoomLayer 위치 조정
-            if (oTarget.x <= 220 && oTarget.y <= iTop + 220) {
-                var iLeft = oThis.canvas.width - 200 + oThis.canvas.offsetLeft - 15;
+            var allowSize = oThis.options.zoomSize + 20;
+            if (oTarget.x <= allowSize && oTarget.y <= iTop + allowSize) {
+                var iLeft = oThis.canvas.width - oThis.options.zoomSize + oThis.canvas.offsetLeft - 15;
                 if (Math.abs(elementPosition.top) + elementPosition.bottom <= window.innerHeight) {
-                    iTop = oThis.canvas.height - 200 + oThis.canvas.offsetTop - 15;
+                    iTop = oThis.canvas.height - oThis.options.zoomSize + oThis.canvas.offsetTop - 15;
                 } else {
-                    iTop = (elementPosition.y * -1) + window.innerHeight - 200 + oThis.canvas.offsetTop - 15;
+                    iTop = (elementPosition.y * -1) + window.innerHeight - oThis.options.zoomSize + oThis.canvas.offsetTop - 15;
 
                     var bottomGap = document.documentElement.scrollTop + elementPosition.y;
                     if (document.documentElement.scrollTop + document.documentElement.clientHeight >= document.documentElement.scrollHeight - bottomGap) {

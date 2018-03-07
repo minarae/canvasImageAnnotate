@@ -8,9 +8,8 @@
 </head>
 <body>
 <div id="main" class="container">
-    <h1>Image Maps Canvas Drawing</h1>
+    <h1>Image Annotation System based on canvas</h1>
     <canvas id="viewport" data-image-url="./resources/images/49b74bffbad7e767f3894dc80a5301e7.jpg"></canvas>
-    <canvas id="zoom" width="200" height="200"></canvas>
     <br/>
     <button type="button" id="chgColor">change color</button>
 
@@ -24,10 +23,10 @@
     $('#viewport').canvasAreas({
         allowGapSize: 10,
         allowResize: true,
+        allowZoom: true,
         onCreated: created,
         onSelected: checkSelect,
         onDeleted: deleted,
-        zoomLayer: 'zoom',
         areas: [
             {
                 id: 0,

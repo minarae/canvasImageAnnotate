@@ -21,7 +21,7 @@
         }
 
         this.setLabel = function (label) {
-            this.label = label;
+            this.label = $.trim(label);
         }
     };
 
@@ -32,11 +32,11 @@
             allowResize: true,
             allowSelect: true,
             allowGapSize: 2,
+            allowZoom: false,
             defaultColor: '#ff961e',
             onCreated: null,
             onSelected: null,
             onDeleted: null,
-            zoomLayer: null,
             areas: []
         }
 
@@ -76,6 +76,10 @@
                     oArea.setColor(value.color);
                 }
 
+                if (value.label) {
+                    oArea.setLabel(value.label);
+                }
+
                 for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
                     oArea.locations.push({
                         x: value.locations[iIdx][0],
@@ -86,6 +90,7 @@
                     x: value.locations[0][0],
                     y: value.locations[0][1],
                 });
+                oArea.isActive = false;
 
                 oThis._aAreas.push(oArea);
             });
@@ -99,14 +104,12 @@
         window.addEventListener('keydown', _setKeyDown);
         window.addEventListener('keyup', _unsetKeyDown);
 
-        if (this.options.zoomLayer !== null) {
-            var zoomCanvas = document.getElementById(this.options.zoomLayer);
+        if (this.options.allowZoom === true) {
+            this.zoomLayer = $('<div>').addClass('zoom-area');
+            $(oObj).parent().append(this.zoomLayer);
 
-            if (zoomCanvas !== null) {
-                oThis.canvas.addEventListener('mousemove', _zoom);
-                oThis.canvas.addEventListener('mousedown', _zoom);
-                oThis.canvas.addEventListener('contextmenu', _zoom);
-            }
+            this.zoomCanvas = $('<canvas>').addClass('zoom-canvas');
+            this.zoomLayer.append(this.zoomCanvas);
         }
 
         function _setKeyDown(e) {
@@ -133,6 +136,13 @@
                 _callOnCreated();
 
                 return false;
+            } else if (_keyCheck() === 'zoom' && oThis.options.allowZoom === true) {
+                oThis.canvas.addEventListener('mousemove', _zoom);
+                oThis.canvas.addEventListener('mousedown', _zoom);
+                oThis.canvas.addEventListener('contextmenu', _zoom);
+                oThis.canvas.addEventListener('mouseout', _mouseOut);
+
+                oThis.zoomLayer.css('display', 'inline');
             }
         }
 
@@ -142,6 +152,15 @@
             if (iIdx >= 0) {
                 oThis.keyCode.splice(iIdx, 1);
                 oThis.keyCode.sort();
+            }
+
+            if (e.keyCode === 16 && oThis.options.allowZoom === true) {
+                oThis.canvas.removeEventListener('mousemove', _zoom);
+                oThis.canvas.removeEventListener('mousedown', _zoom);
+                oThis.canvas.removeEventListener('contextmenu', _zoom);
+                oThis.canvas.removeEventListener('mouseout', _mouseOut);
+
+                oThis.zoomLayer.css('display', 'none');
             }
         }
 
@@ -458,6 +477,7 @@
             var squareMode = JSON.stringify([17]);
             var separatingMode = JSON.stringify([17, 18]);
             var completeDraw = JSON.stringify([13]);
+            var zoomMode = JSON.stringify([16]);
 
             var checkValue = JSON.stringify(oThis.keyCode);
 
@@ -469,6 +489,8 @@
                 return 'separating';
             } else if (checkValue === completeDraw) {
                 return 'completing';
+            } else if (checkValue === zoomMode) {
+                return 'zoom';
             }
         }
 
@@ -583,18 +605,48 @@
             }
         }
 
-        function _zoom(event) {
-            var x = event.layerX;
-            var y = event.layerY;
-            var zoomCanvas = document.getElementById(oThis.options.zoomLayer);
+        function _zoom(e) {
+            oThis.zoomLayer.css('display', 'inline');
+
+            var oTarget = _getMousePosition(e);
+            var elementPosition = oThis.canvas.getBoundingClientRect();
+
+            var iTop = oThis.canvas.offsetTop;
+
+            if (elementPosition.y <= 0) {
+                iTop -= elementPosition.y;
+            }
+
+            // zoomLayer 위치 조정
+            if (oTarget.x <= 220 && oTarget.y <= iTop + 220) {
+                var iLeft = oThis.canvas.width - 200 + oThis.canvas.offsetLeft - 15;
+                if (Math.abs(elementPosition.top) + elementPosition.bottom <= window.innerHeight) {
+                    iTop = oThis.canvas.height - 200 + oThis.canvas.offsetTop - 15;
+                } else {
+                    iTop = (elementPosition.y * -1) + window.innerHeight - 200 + oThis.canvas.offsetTop - 15;
+
+                    var bottomGap = document.documentElement.scrollTop + elementPosition.y;
+                    if (document.documentElement.scrollTop + document.documentElement.clientHeight >= document.documentElement.scrollHeight - bottomGap) {
+                        iTop -= bottomGap;
+                    }
+                }
+
+                oThis.zoomLayer.css('left', iLeft);
+                oThis.zoomLayer.css('top', iTop);
+            } else {
+                oThis.zoomLayer.css('left', oThis.canvas.offsetLeft);
+                oThis.zoomLayer.css('top', iTop);
+            }
+
+            var zoomCanvas = oThis.zoomCanvas[0];
             var zoomCtx = zoomCanvas.getContext('2d');
 
             var width = zoomCanvas.width;
             var height = zoomCanvas.height;
 
             zoomCtx.drawImage(oThis.canvas,
-                Math.min(Math.max(0, x - 30), oThis.oImage.width - 60),
-                Math.min(Math.max(0, y - 30), oThis.oImage.height - 60),
+                Math.min(Math.max(0, oTarget.x - 30), oThis.oImage.width - 60),
+                Math.min(Math.max(0, oTarget.y - 30), oThis.oImage.height - 60),
                 60, 60,
                 0, 0,
                 width, height);
@@ -608,6 +660,10 @@
             zoomCtx.moveTo(0, splitHeight);
             zoomCtx.lineTo(width, splitHeight);
             zoomCtx.stroke();
+        }
+
+        function _mouseOut(e) {
+            oThis.zoomLayer.css('display', 'none');
         }
     }
 
@@ -784,6 +840,7 @@
     }
 
     $.canvasAreasDraw.prototype.setLabel = function (options) {
+        console.log(this._aAreas);
         if (isObject(this._aAreas[options.id]) === false) {
             return false;
         }
@@ -795,7 +852,7 @@
     }
 
     $.canvasAreasDraw.prototype.focusArea = function (id) {
-        for (var iIdx = 0; iIdx <= this._iAreaIdx; iIdx++) {
+        for (var iIdx = 0; iIdx <= this._aAreas.length; iIdx++) {
             if (isObject(this._aAreas[iIdx]) === false) {
                 continue;
             }

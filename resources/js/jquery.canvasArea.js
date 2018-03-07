@@ -235,10 +235,12 @@
             var iLength = oThis._aAreas[aSelectedPoint[0]].getLength();
 
             if (_keyCheck() === 'square' && _checkSquare(oThis._aAreas[aSelectedPoint[0]].locations) === true) {
-                oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]] = oTarget;
+                oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].x = oTarget.x;
+                oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].y = oTarget.y;
                 switch (aSelectedPoint[1]) {
                     case 0:
-                        oThis._aAreas[aSelectedPoint[0]].locations[4] = oTarget;
+                        oThis._aAreas[aSelectedPoint[0]].locations[4].x = oTarget.x;
+                        oThis._aAreas[aSelectedPoint[0]].locations[4].y = oTarget.y;
                         oThis._aAreas[aSelectedPoint[0]].locations[1].x = oTarget.x;
                         oThis._aAreas[aSelectedPoint[0]].locations[3].y = oTarget.y;
                         break;
@@ -257,7 +259,8 @@
                         oThis._aAreas[aSelectedPoint[0]].locations[2].x = oTarget.x;
                         break;
                     case 4:
-                        oThis._aAreas[aSelectedPoint[0]].locations[0] = oTarget;
+                        oThis._aAreas[aSelectedPoint[0]].locations[0].x = oTarget.x;
+                        oThis._aAreas[aSelectedPoint[0]].locations[0].y = oTarget.y;
                         oThis._aAreas[aSelectedPoint[0]].locations[1].x = oTarget.x;
                         oThis._aAreas[aSelectedPoint[0]].locations[3].y = oTarget.y;
                         break;
@@ -266,13 +269,17 @@
                 if (iLength !== 1 && (aSelectedPoint[1] === 0 || aSelectedPoint[1] === iLength - 1)) {
                     if (oThis._aAreas[aSelectedPoint[0]].locations[0].x === oThis._aAreas[aSelectedPoint[0]].locations[iLength - 1].x
                         && oThis._aAreas[aSelectedPoint[0]].locations[0].y === oThis._aAreas[aSelectedPoint[0]].locations[iLength - 1].y) {
-                        oThis._aAreas[aSelectedPoint[0]].locations[0] = oTarget;
-                        oThis._aAreas[aSelectedPoint[0]].locations[iLength - 1] = oTarget;
+                        oThis._aAreas[aSelectedPoint[0]].locations[0].x = oTarget.x;
+                        oThis._aAreas[aSelectedPoint[0]].locations[0].y = oTarget.y;
+                        oThis._aAreas[aSelectedPoint[0]].locations[iLength - 1].x = oTarget.x;
+                        oThis._aAreas[aSelectedPoint[0]].locations[iLength - 1].y = oTarget.y;
                     } else {
-                        oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]] = oTarget;
+                        oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].x = oTarget.x;
+                        oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].y = oTarget.y;
                     }
                 } else {
-                    oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]] = oTarget;
+                    oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].x = oTarget.x;
+                    oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].y = oTarget.y;
                 }
             }
             oThis._aAreas[aSelectedPoint[0]].isActive = true;

@@ -4,7 +4,7 @@
     var AreaStruct = function (sId) {
         this.id = sId;
         this.color = '#ff961e';
-        this.name = 'test Label';
+        this.label = null;
         this.isActive = true;
         this.locations = [];
 
@@ -18,6 +18,10 @@
 
         this.setColor = function (color) {
             this.color = color;
+        }
+
+        this.setLabel = function (label) {
+            this.label = label;
         }
     };
 
@@ -99,7 +103,9 @@
             var zoomCanvas = document.getElementById(this.options.zoomLayer);
 
             if (zoomCanvas !== null) {
-                oThis.canvas.addEventListener('mousemove', zoom);
+                oThis.canvas.addEventListener('mousemove', _zoom);
+                oThis.canvas.addEventListener('mousedown', _zoom);
+                oThis.canvas.addEventListener('contextmenu', _zoom);
             }
         }
 
@@ -570,7 +576,7 @@
             }
         }
 
-        function zoom(event) {
+        function _zoom(event) {
             var x = event.layerX;
             var y = event.layerY;
             var zoomCanvas = document.getElementById(oThis.options.zoomLayer);
@@ -632,6 +638,7 @@
                 ctx.beginPath();
                 ctx.moveTo(oCurBlocks.locations[0].x, oCurBlocks.locations[0].y);
                 ctx.fillStyle = 'rgb(255,255,255)';
+                ctx.font = 'bold 15px arial';
                 ctx.strokeStyle = rgba(oCurBlocks.getColor());
 
                 var iLength = oCurBlocks.getLength();
@@ -655,7 +662,7 @@
                     ctx.fill();
                     ctx.stroke();
 
-                    _drawTrash(ctx, aLocations, oCurBlocks.id);
+                    _postProcessDrawing(ctx, oCurBlocks);
                 }
 
                 if (oCurBlocks.isActive === false) {
@@ -667,32 +674,46 @@
             ctx.drawImage(oThis.oImage, 0, 0);
         }
 
-        function _drawTrash(ctx, aTargetPoints, iIndex) {
-            var iMaxX, iFindIdx = 2;
+        function _postProcessDrawing(ctx, oBlock) {
+            var aTargetPoints = oBlock.locations;
+            var iIndex = oBlock.id;
+            var iMinX, iMaxX, iFindIdx = 2;
             var iAllowBandwidth = 30;
+            var iIdx;
 
-            // 최우측 좌표를 찾음.
+            // 최우측, 최좌측 좌표를 찾음.
             iMaxX = 0;
-            for (var iIdx = 0; iIdx < aTargetPoints.length; iIdx++) {
+            iMinX = ctx.canvas.width;
+            for (iIdx = 0; iIdx < aTargetPoints.length; iIdx++) {
                 if (iMaxX < aTargetPoints[iIdx].x) {
                     iMaxX = aTargetPoints[iIdx].x;
                 }
-            }
 
-            var aIndexY = [];
-            // 최우측 좌표에서 allowSize 안에 있는 좌표들을 찾음.
-            for (var iIdx = 0; iIdx < aTargetPoints.length; iIdx++) {
-                if (aTargetPoints[iIdx].x > iMaxX - iAllowBandwidth) {
-                    aIndexY.push(iIdx);
+                if (iMinX > aTargetPoints[iIdx].x) {
+                    iMinX = aTargetPoints[iIdx].x;
                 }
             }
 
+            var aMaxY = [];
+            var aMinY = [];
+            // 최우측 좌표에서 allowSize 안에 있는 좌표들을 찾음.
+            for (iIdx = 0; iIdx < aTargetPoints.length; iIdx++) {
+                if (aTargetPoints[iIdx].x > iMaxX - iAllowBandwidth) {
+                    aMaxY.push(iIdx);
+                }
+
+                if (aTargetPoints[iIdx].x < iMinX + iAllowBandwidth) {
+                    aMinY.push(iIdx);
+                }
+            }
+
+            /* 휴지통 그리기 */
             // 우측 좌표에서 가장 y가 작은 값은 찾음.
-            var iMinY = ctx.canvas.width;
-            for (var iIdx = 0; iIdx < aIndexY.length; iIdx++) {
-                if (aTargetPoints[aIndexY[iIdx]].y < iMinY) {
-                    iMinY = aTargetPoints[aIndexY[iIdx]].y;
-                    iFindIdx = aIndexY[iIdx];
+            var iRightMinY = ctx.canvas.height;
+            for (iIdx = 0; iIdx < aMaxY.length; iIdx++) {
+                if (aTargetPoints[aMaxY[iIdx]].y < iRightMinY) {
+                    iRightMinY = aTargetPoints[aMaxY[iIdx]].y;
+                    iFindIdx = aMaxY[iIdx];
                 }
             }
 
@@ -724,6 +745,23 @@
             } else {
                 div.css('left', iLeft).css('top', iTop).css('z-index', 1);
             }
+
+            /* 텍스트 쓰기 */
+            if (oBlock.label !== '' && oBlock.label !== null) {
+                var iLeftMinY = ctx.canvas.height;
+                for (iIdx = 0; iIdx < aMinY.length; iIdx++) {
+                    if (aTargetPoints[aMinY[iIdx]].y < iLeftMinY) {
+                        iLeftMinY = aTargetPoints[aMinY[iIdx]].y;
+                        iFindIdx = aMinY[iIdx];
+                    }
+                }
+
+                iLeft = aTargetPoints[iFindIdx].x + 4;
+                iTop = aTargetPoints[iFindIdx].y - 10;
+
+                ctx.fillStyle = rgba(oBlock.color);
+                ctx.fillText(oBlock.label, iLeft, iTop);
+            }
         }
     }
 
@@ -733,6 +771,17 @@
         }
 
         this._aAreas[options.id].setColor(options.color);
+        this.draw();
+
+        return true;
+    }
+
+    $.canvasAreasDraw.prototype.setLabel = function (options) {
+        if (isObject(this._aAreas[options.id]) === false) {
+            return false;
+        }
+
+        this._aAreas[options.id].setLabel(options.label);
         this.draw();
 
         return true;

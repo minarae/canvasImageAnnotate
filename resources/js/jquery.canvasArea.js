@@ -34,13 +34,14 @@
             allowSelect: true,
             allowGapSize: 2,
             allowZoom: false,
-            zoomSize: 200,
             defaultColor: '#ff961e',
             onCreated: null,
             onSelected: null,
             onDeleted: null,
             areas: []
         }
+
+        this.oObj = oObj;
 
         this.options = $.extend(oDefaultOptions, oCustomOptions);
 
@@ -59,7 +60,9 @@
         this.ctx = this.canvas.getContext('2d');
 
         // 이미지 객체 생성
-        this.oImage = new Image();
+        if (this.oImage === undefined) {
+            this.oImage = new Image();
+        }
 
         // 상태값
         this.status = 'ready';
@@ -67,56 +70,42 @@
         // 키보드값 체크
         this.keyCode = [];
 
-        this.oImage.src = $(oObj).attr('data-image-url');
-        this.oImage.onload = function () {
-            oThis.canvas.width = oThis.oImage.width;
-            oThis.canvas.height = oThis.oImage.height;
+        if ($(oObj).data('image-url') !== undefined) {
+            this.oImage.src = $(oObj).attr('data-image-url');
+            this.oImage.onload = function () {
+                oThis.canvas.width = oThis.oImage.width;
+                oThis.canvas.height = oThis.oImage.height;
 
-            oThis.options.areas.forEach(function (value, index, array) {
-                var oArea = new AreaStruct(value.id);
-                if (value.color) {
-                    oArea.setColor(value.color);
-                }
+                oThis.options.areas.forEach(function (value, index, array) {
+                    var oArea = new AreaStruct(value.id);
+                    if (value.color) {
+                        oArea.setColor(value.color);
+                    }
 
-                if (value.label) {
-                    oArea.setLabel(value.label);
-                }
+                    if (value.label) {
+                        oArea.setLabel(value.label);
+                    }
 
-                for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
+                    for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
+                        oArea.locations.push({
+                            x: value.locations[iIdx][0],
+                            y: value.locations[iIdx][1],
+                        });
+                    }
                     oArea.locations.push({
-                        x: value.locations[iIdx][0],
-                        y: value.locations[iIdx][1],
+                        x: value.locations[0][0],
+                        y: value.locations[0][1],
                     });
-                }
-                oArea.locations.push({
-                    x: value.locations[0][0],
-                    y: value.locations[0][1],
+                    oArea.isActive = false;
+
+                    oThis._aAreas.push(oArea);
                 });
-                oArea.isActive = false;
 
-                oThis._aAreas.push(oArea);
-            });
-
-            oThis.draw();
+                oThis.draw();
+            }
         }
 
-        if (this.options.allowEdit === true) {
-            oThis.canvas.addEventListener('mousedown', _mouseDown);
-            oThis.canvas.addEventListener('contextmenu', _rightDown);
-            oThis.canvas.addEventListener('mouseup', _stopDrag);
-            window.addEventListener('keydown', _setKeyDown);
-            window.addEventListener('keyup', _unsetKeyDown);
-        }
-
-        if (this.options.allowZoom === true) {
-            this.zoomLayer = $('<div>').addClass('zoom-area').css('width', this.options.zoomSize).css('height', this.options.zoomSize);
-            $(oObj).parent().append(this.zoomLayer);
-
-            this.zoomCanvas = $('<canvas>').addClass('zoom-canvas');
-            this.zoomLayer.append(this.zoomCanvas);
-        }
-
-        function _setKeyDown(e) {
+        this._setKeyDown = function (e) {
             var keyCode = e.keyCode;
 
             if (oThis.keyCode.indexOf(keyCode) < 0) {
@@ -150,7 +139,7 @@
             }
         }
 
-        function _unsetKeyDown(e) {
+        this._unsetKeyDown = function (e) {
             var iIdx = oThis.keyCode.indexOf(e.keyCode);
 
             if (iIdx >= 0) {
@@ -168,7 +157,28 @@
             }
         }
 
-        function _stopDrag() {
+        function _keyCheck() {
+            var squareMode = JSON.stringify([17]);
+            var separatingMode = JSON.stringify([17, 18]);
+            var completeDraw = JSON.stringify([13]);
+            var zoomMode = JSON.stringify([16]);
+
+            var checkValue = JSON.stringify(oThis.keyCode);
+
+            if (oThis.keyCode.length === 0) {
+                return '';
+            } else if (checkValue === squareMode) {
+                return 'square';
+            } else if (checkValue === separatingMode) {
+                return 'separating';
+            } else if (checkValue === completeDraw) {
+                return 'completing';
+            } else if (checkValue === zoomMode) {
+                return 'zoom';
+            }
+        }
+
+        this._stopDrag = function () {
             oThis.canvas.removeEventListener('mousemove', _movePoint);
             oThis.canvas.removeEventListener('mousemove', _moveRegion);
 
@@ -184,7 +194,7 @@
         }
 
         // 좌표를 마우스 우클릭시 해당 좌표를 삭제
-        function _rightDown(e) {
+        this._rightDown = function (e) {
             e.preventDefault();
 
             if (Array.isArray(oThis._aAreas) === false || oThis._aAreas.length === 0) {
@@ -333,7 +343,7 @@
             oThis.draw();
         }
 
-        function _mouseDown(e) {
+        this._mouseDown = function (e) {
             if (e.which === 3) {
                 return false;
             }
@@ -477,27 +487,6 @@
             }
         }
 
-        function _keyCheck() {
-            var squareMode = JSON.stringify([17]);
-            var separatingMode = JSON.stringify([17, 18]);
-            var completeDraw = JSON.stringify([13]);
-            var zoomMode = JSON.stringify([16]);
-
-            var checkValue = JSON.stringify(oThis.keyCode);
-
-            if (oThis.keyCode.length === 0) {
-                return '';
-            } else if (checkValue === squareMode) {
-                return 'square';
-            } else if (checkValue === separatingMode) {
-                return 'separating';
-            } else if (checkValue === completeDraw) {
-                return 'completing';
-            } else if (checkValue === zoomMode) {
-                return 'zoom';
-            }
-        }
-
         function _checkPointOnLine(oTarget, oPoint1, oPoint2) {
             var iAllowGapSize = oThis.options.allowGapSize;
 
@@ -622,13 +611,12 @@
             }
 
             // zoomLayer 위치 조정
-            var allowSize = oThis.options.zoomSize + 20;
-            if (oTarget.x <= allowSize && oTarget.y <= iTop + allowSize) {
-                var iLeft = oThis.canvas.width - oThis.options.zoomSize + oThis.canvas.offsetLeft - 15;
+            if (oTarget.x <= 220 && oTarget.y <= iTop + 220) {
+                var iLeft = oThis.canvas.width - 200 + oThis.canvas.offsetLeft - 15;
                 if (Math.abs(elementPosition.top) + elementPosition.bottom <= window.innerHeight) {
-                    iTop = oThis.canvas.height - oThis.options.zoomSize + oThis.canvas.offsetTop - 15;
+                    iTop = oThis.canvas.height - 200 + oThis.canvas.offsetTop - 15;
                 } else {
-                    iTop = (elementPosition.y * -1) + window.innerHeight - oThis.options.zoomSize + oThis.canvas.offsetTop - 15;
+                    iTop = (elementPosition.y * -1) + window.innerHeight - 200 + oThis.canvas.offsetTop - 15;
 
                     var bottomGap = document.documentElement.scrollTop + elementPosition.y;
                     if (document.documentElement.scrollTop + document.documentElement.clientHeight >= document.documentElement.scrollHeight - bottomGap) {
@@ -669,6 +657,22 @@
 
         function _mouseOut(e) {
             oThis.zoomLayer.css('display', 'none');
+        }
+
+        if (this.options.allowEdit === true) {
+            oThis.canvas.addEventListener('mousedown', this._mouseDown);
+            oThis.canvas.addEventListener('contextmenu', this._rightDown);
+            oThis.canvas.addEventListener('mouseup', this._stopDrag);
+            window.addEventListener('keydown', this._setKeyDown);
+            window.addEventListener('keyup', this._unsetKeyDown);
+        }
+
+        if (this.options.allowZoom === true) {
+            this.zoomLayer = $('<div>').addClass('zoom-area');
+            $(oObj).parent().append(this.zoomLayer);
+
+            this.zoomCanvas = $('<canvas>').addClass('zoom-canvas');
+            this.zoomLayer.append(this.zoomCanvas);
         }
     }
 
@@ -776,42 +780,44 @@
             }
 
             /* 휴지통 그리기 */
-            // 우측 좌표에서 가장 y가 작은 값은 찾음.
-            var iRightMinY = ctx.canvas.height;
-            for (iIdx = 0; iIdx < aMaxY.length; iIdx++) {
-                if (aTargetPoints[aMaxY[iIdx]].y < iRightMinY) {
-                    iRightMinY = aTargetPoints[aMaxY[iIdx]].y;
-                    iFindIdx = aMaxY[iIdx];
-                }
-            }
-
-            var iLeft = aTargetPoints[iFindIdx].x + ctx.canvas.offsetLeft + 4;
-            var iTop = aTargetPoints[iFindIdx].y + ctx.canvas.offsetTop - 28;
-
-            var div = $('#trash-' + iIndex);
-            if (div.length === 0) {
-                var div = $('<div>').addClass('delete-area').append(
-                    $('<div>').addClass('select-areas-delete-area')
-                ).css('left', iLeft).css('top', iTop).css('z-index', 1).attr('id', 'trash-' + iIndex).click(function () {
-                    var aElementId = $(this).attr('id').split('-');
-
-                    _callOnDeleted(aElementId[1]);
-                    for (var iIdx = 0; iIdx < aAreas.length; iIdx++) {
-                        if (isObject(aAreas[iIdx]) === false) {
-                            continue;
-                        }
-                        if (aAreas[iIdx].id.toString() === aElementId[1].toString()) {
-                            aAreas.splice(iIdx, 1);
-                            break;
-                        }
+            if (oThis.options.allowEdit === true) {
+                // 우측 좌표에서 가장 y가 작은 값은 찾음.
+                var iRightMinY = ctx.canvas.height;
+                for (iIdx = 0; iIdx < aMaxY.length; iIdx++) {
+                    if (aTargetPoints[aMaxY[iIdx]].y < iRightMinY) {
+                        iRightMinY = aTargetPoints[aMaxY[iIdx]].y;
+                        iFindIdx = aMaxY[iIdx];
                     }
-                    $(this).remove();
-                    drawAction();
-                });
+                }
 
-                $(oThis.canvas).parent().append(div);
-            } else {
-                div.css('left', iLeft).css('top', iTop).css('z-index', 1);
+                var iLeft = aTargetPoints[iFindIdx].x + ctx.canvas.offsetLeft + 4;
+                var iTop = aTargetPoints[iFindIdx].y + ctx.canvas.offsetTop - 28;
+
+                var div = $('#trash-' + iIndex);
+                if (div.length === 0) {
+                    var div = $('<div>').addClass('delete-area').append(
+                        $('<div>').addClass('select-areas-delete-area')
+                    ).css('left', iLeft).css('top', iTop).css('z-index', 1).attr('id', 'trash-' + iIndex).click(function () {
+                        var aElementId = $(this).attr('id').split('-');
+
+                        _callOnDeleted(aElementId[1]);
+                        for (var iIdx = 0; iIdx < aAreas.length; iIdx++) {
+                            if (isObject(aAreas[iIdx]) === false) {
+                                continue;
+                            }
+                            if (aAreas[iIdx].id.toString() === aElementId[1].toString()) {
+                                aAreas.splice(iIdx, 1);
+                                break;
+                            }
+                        }
+                        $(this).remove();
+                        drawAction();
+                    });
+
+                    $(oThis.canvas).parent().append(div);
+                } else {
+                    div.css('left', iLeft).css('top', iTop).css('z-index', 1);
+                }
             }
 
             /* 텍스트 쓰기 */
@@ -893,6 +899,33 @@
         });
 
         return result;
+    }
+
+    $.canvasAreasDraw.prototype.destroy = function () {
+        this._aAreas = [];
+        this._iAreaIdx = null;
+        this._iActiveBlock = null;
+        this._aSelectedPosition = null;
+        this.keyCode = null;
+
+        this.canvas.removeEventListener('mousedown', this._mouseDown);
+        this.canvas.removeEventListener('contextmenu', this._rightDown);
+        this.canvas.removeEventListener('mouseup', this._stopDrag);
+        window.removeEventListener('keydown', this._setKeyDown);
+        window.removeEventListener('keyup', this._unsetKeyDown);
+
+        $('.delete-area').remove();
+        $('.zoom-area').remove();
+
+        this.ctx.beginPath();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.oObj.attr('data-image-url', '');
+    }
+
+    $.canvasAreasDraw.prototype.reset = function (options) {
+        this.options = $.extend(this.options, options);
+        this.init(this.oObj, this.options);
     }
 
     $.canvasAreas = function (object, options) {

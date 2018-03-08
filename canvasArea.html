@@ -16,12 +16,13 @@
     <input type="number" id="id" value="0">
     <button type="button" id="focus">focus</button>
     <button type="button" id="getResult">get Result</button>
+    <button type="button" id="reset">reset</button>
 </div>
 <script language="javascript" src="./resources/js/jquery-3.3.1.min.js"></script>
 <script language="javascript" src="./resources/js/jquery.canvasArea.js"></script>
 <script>
     $('#viewport').canvasAreas({
-        allowEdit: false,
+        allowEdit: true,
         allowGapSize: 10,
         allowResize: true,
         allowZoom: true,
@@ -58,16 +59,21 @@
         console.log(result);
     });
 
+    $('#reset').click(function () {
+        $('#viewport').attr('data-image-url', 'https://mdn.mozillademos.org/files/4553/Capitan_Meadows,_Yosemite_National_Park.jpg');
+        $('#viewport').canvasAreas('reset', {areas: []});
+    });
+
     function created(sId) {
-        //console.log(sId);
+        console.log(sId);
     }
 
     function deleted(sId) {
-        //console.log(sId);
+        console.log(sId);
     }
 
     function checkSelect(options) {
-        //console.log(options);
+        console.log(options);
     }
 </script>
 </body>

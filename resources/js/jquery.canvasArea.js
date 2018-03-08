@@ -28,6 +28,7 @@
     $.canvasAreasDraw.prototype.init = function (oObj, oCustomOptions) {
         var oThis = this;
         var oDefaultOptions = {
+            allowEdit: true,
             allowMove: true,
             allowResize: true,
             allowSelect: true,
@@ -99,11 +100,13 @@
             oThis.draw();
         }
 
-        oThis.canvas.addEventListener('mousedown', _mouseDown);
-        oThis.canvas.addEventListener('contextmenu', _rightDown);
-        oThis.canvas.addEventListener('mouseup', _stopDrag);
-        window.addEventListener('keydown', _setKeyDown);
-        window.addEventListener('keyup', _unsetKeyDown);
+        if (this.options.allowEdit === true) {
+            oThis.canvas.addEventListener('mousedown', _mouseDown);
+            oThis.canvas.addEventListener('contextmenu', _rightDown);
+            oThis.canvas.addEventListener('mouseup', _stopDrag);
+            window.addEventListener('keydown', _setKeyDown);
+            window.addEventListener('keyup', _unsetKeyDown);
+        }
 
         if (this.options.allowZoom === true) {
             this.zoomLayer = $('<div>').addClass('zoom-area').css('width', this.options.zoomSize).css('height', this.options.zoomSize);

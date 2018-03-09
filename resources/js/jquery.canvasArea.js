@@ -55,6 +55,8 @@
 
         this._iActiveBlock = null;
 
+        this._separatingPosition = [];
+
         // 캔버스
         this.canvas = $(oObj)[0];
         this.ctx = this.canvas.getContext('2d');
@@ -155,6 +157,112 @@
 
                 oThis.zoomLayer.css('display', 'none');
             }
+
+            if (oThis.status === 'separating') { // 검사
+                var finalPosition = oThis._separatingPosition[oThis._separatingPosition.length - 1];
+                var oCurArea = oThis._aAreas[oThis._aSelectedPosition[0]];
+                var iLength = oCurArea.getLength();
+                var aLocations = oCurArea.locations;
+
+                var iGapX, iGapY;
+
+                for (var iIdx = 0; iIdx < iLength; iIdx++) {
+                    if (oThis._aSelectedPosition[1] === iLength - 1) {
+                        if (iIdx === 0 || iIdx === oThis._aSelectedPosition[1]) {
+                            continue;
+                        }
+                    } else {
+                        if (iIdx === oThis._aSelectedPosition[1]) {
+                            continue;
+                        }
+                    }
+
+                    iGapX = Math.abs(aLocations[iIdx].x - finalPosition.x);
+                    iGapY = Math.abs(aLocations[iIdx].y - finalPosition.y);
+
+                    if (iGapX <= oThis.options.allowGapSize && iGapY <= oThis.options.allowGapSize) {
+                        oThis._separatingPosition[oThis._separatingPosition.length - 1] = aLocations[iIdx];
+                        separate(iIdx);
+                        break;
+                    }
+                }
+            }
+
+            // 나누기 종료
+            oThis.status = 'ready';
+            oThis._separatingPosition = [];
+            oThis._aSelectedPosition = [];
+
+            oThis.draw();
+        }
+
+        function separate(iEndPoint) {
+            var iFront = oThis._aSelectedPosition[1];
+            var iEnd = iEndPoint;
+
+            var aFront = [];
+            var aEnd = [];
+            var iIdx;
+            var oCurArea = oThis._aAreas[oThis._aSelectedPosition[0]];
+            var iLength = oCurArea.getLength();
+            var aLocations = oCurArea.locations;
+
+            for (iIdx = iEnd; ; iIdx++) {
+                if (iIdx === iLength - 1) {
+                    iIdx = 0;
+                }
+                aFront.push({
+                    x: aLocations[iIdx].x,
+                    y: aLocations[iIdx].y,
+                });
+
+                if (iIdx === iFront) {
+                    break;
+                }
+            }
+
+            for (iIdx = iFront; ; iIdx++) {
+                if (iIdx === iLength - 1) {
+                    iIdx = 0;
+                }
+                aEnd.push({
+                    x: aLocations[iIdx].x,
+                    y: aLocations[iIdx].y,
+                });
+
+                if (iIdx === iEnd) {
+                    break;
+                }
+            }
+
+            var separating = oThis._separatingPosition;
+            // 처음과 마지막 제거
+            for (iIdx = 1; iIdx < separating.length; iIdx++) {
+                aFront.push({
+                    x: separating[iIdx].x,
+                    y: separating[iIdx].y
+                });
+                aEnd.push({
+                    x: separating[separating.length - iIdx - 1].x,
+                    y: separating[separating.length - iIdx - 1].y
+                });
+            }
+
+            oThis._aAreas[oThis._aSelectedPosition[0]].locations = aFront;
+
+            for (; isObject(oThis._aAreas[oThis._iAreaIdx]) === true; oThis._iAreaIdx++) { }
+            oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(oThis._iAreaIdx);
+            oThis._aAreas[oThis._iAreaIdx].setColor(oThis._aAreas[oThis._aSelectedPosition[0]].color);
+            oThis._aAreas[oThis._iAreaIdx].setLabel(oThis._aAreas[oThis._aSelectedPosition[0]].label);
+            oThis._aAreas[oThis._iAreaIdx].locations = aEnd;
+
+            oThis._aAreas[oThis._aSelectedPosition[0]].isActive = false;
+            oThis._aAreas[oThis._iAreaIdx].isActive = true;
+            oThis._iActiveBlock = oThis._iAreaIdx;
+
+            oThis._iAreaIdx++;
+
+            _callOnCreated();
         }
 
         function _keyCheck() {
@@ -324,7 +432,7 @@
             e.preventDefault();
 
             oThis.canvas.removeEventListener('mousemove', oThis.movePoint);
-            oThis._aSelectedPositionaSelectedPoint = [];
+            oThis._aSelectedPosition = [];
 
             $(oThis.canvas).css('cursor', 'move');
             // 좌표 구하기
@@ -359,6 +467,14 @@
             // 좌표 구하기
             var oTarget = _getMousePosition(e);
 
+            // 영역 분리 중이면 저장하고 리턴
+            if (oThis.status === 'separating') {
+                oThis._separatingPosition.push(oTarget);
+                //console.log(oThis._separatingPosition);
+                oThis.draw();
+                return false;
+            }
+
             // 모든 영역은 비활성화
             for (var iIdx = 0; iIdx <= oThis._iAreaIdx; iIdx++) {
                 if (isObject(oThis._aAreas[iIdx]) === false) {
@@ -379,9 +495,23 @@
                     var gapY = Math.abs(oTarget.y - value.y);
 
                     if (gapX <= options.allowGapSize && gapY <= options.allowGapSize) {
-                        if (key !== 0 || status === 'ready') {
+                        if (findFlag === false && (key !== 0 || oThis.status === 'ready')) {
+                            if (_keyCheck() === 'separating') {
+                                oThis.status = 'separating';
+                                oThis._separatingPosition = [
+                                    {
+                                        x: value.x,
+                                        y: value.y
+                                    }
+                                ];
+                                oThis._aAreas[iIdx].isActive = true;
+
+                                oThis.draw();
+                            } else {
+                                canvas.addEventListener('mousemove', _movePoint);
+                            }
                             oThis._aSelectedPosition = [iIdx, key];
-                            canvas.addEventListener('mousemove', _movePoint);
+
                             findFlag = true;
                             return false;
                         }
@@ -678,6 +808,7 @@
 
     $.canvasAreasDraw.prototype.draw = function () {
         var aAreas = this._aAreas;
+        var aSeparating = this._separatingPosition;
         var ctx = this.ctx;
         var oThis = this;
         drawAction();
@@ -691,6 +822,8 @@
         function drawAction() {
             // 캔버스 초기화
             ctx.canvas.width = ctx.canvas.width;
+
+            var activeColor = null;
 
             ctx.globalCompositeOperation = 'destination-over';
             ctx.fillStyle = 'rgb(255,255,255)'
@@ -712,6 +845,10 @@
                 ctx.fillStyle = 'rgb(255,255,255)';
                 ctx.font = 'bold 15px arial';
                 ctx.strokeStyle = rgba(oCurBlocks.getColor());
+
+                if (oCurBlocks.isActive === true) {
+                    activeColor = rgba(oCurBlocks.getColor());
+                }
 
                 var iLength = oCurBlocks.getLength();
                 var aLocations = oCurBlocks.locations;
@@ -743,6 +880,29 @@
                     $('#trash-' + oCurBlocks.id).css('display', 'block');
                 }
             }
+
+            if (aSeparating.length > 0) {
+                ctx.beginPath();
+                ctx.fillStyle = 'rgb(255,255,255)';
+                ctx.font = 'bold 15px arial';
+                ctx.strokeStyle = activeColor;
+                ctx.moveTo(aSeparating[0].x, aSeparating[0].y);
+
+                for (var iIdx = 0; iIdx < aSeparating.length; iIdx++) {
+                    ctx.setLineDash([]);
+                    ctx.fillRect(aSeparating[iIdx].x - 2, aSeparating[iIdx].y - 2, 4, 4);
+                    ctx.strokeRect(aSeparating[iIdx].x - 2, aSeparating[iIdx].y - 2, 4, 4);
+
+                    ctx.lineTo(aSeparating[iIdx].x, aSeparating[iIdx].y);
+
+                    if (i > 0) {
+                        ctx.setLineDash([5, 5]);
+                        ctx.lineTo(aSeparating[iIdx].x, aSeparating[iIdx].y);
+                    }
+                }
+                ctx.stroke();
+            }
+
             ctx.drawImage(oThis.oImage, 0, 0);
         }
 

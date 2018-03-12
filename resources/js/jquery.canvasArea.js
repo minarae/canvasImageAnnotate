@@ -292,10 +292,6 @@
             oThis.canvas.removeEventListener('mousemove', _movePoint);
             oThis.canvas.removeEventListener('mousemove', _moveRegion);
 
-            /*if (oThis._iActiveBlock !== null) {
-                console.log(oThis._aAreas[oThis._iActiveBlock].locations);
-            }*/
-
             oThis.aSelectedPoint = [];
             oThis.oOriginPosition = null;
 
@@ -467,12 +463,10 @@
             // 영역 분리 중이면 저장하고 리턴
             if (oThis.status === 'separating') {
                 oThis._separatingPosition.push(oTarget);
-                //console.log(oThis._separatingPosition);
                 oThis.draw();
                 return false;
             }
 
-            console.log(oThis._iActiveBlock);
             // 모든 영역은 비활성화
             for (var iIdx = 0; iIdx <= oThis._iAreaIdx; iIdx++) {
                 if (isObject(oThis._aAreas[iIdx]) === false) {
@@ -522,8 +516,6 @@
                                 canvas.addEventListener('mousemove', _movePoint);
                             }
                             oThis._aSelectedPosition = [iAreaIdx, key];
-                            console.log(oThis._aAreas[iAreaIdx]);
-                            console.log(oThis._aSelectedPosition);
 
                             findFlag = true;
                             return false;
@@ -567,9 +559,6 @@
                 oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(oThis._iAreaIdx);
                 oThis._aAreas[oThis._iAreaIdx].setColor(oThis.options.defaultColor);
 
-                console.log(oThis.keyCode);
-                console.log(oThis.keyCode.indexOf(KEYCODE_CTRL));
-                console.log(oThis.keyCode.indexOf(KEYCODE_ALT));
                 if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 && oThis.keyCode.indexOf(KEYCODE_ALT) === -1) { // Control 키를 누른 상태에서 좌표를 찍으면 사각형을 만든다.
                     oThis.oOriginPosition = oTarget;
 
@@ -683,35 +672,41 @@
         }
 
         function _checkInside(oTarget, aLocation) {
-            var iLeftX, iRightX = 0, iTopY, iBottomY = 0;
+            var x = oTarget.x, y = oTarget.y;
             var iAllowGapSize = oThis.options.allowGapSize;
 
-            iLeftX = aLocation[0].x;
-            iTopY = aLocation[0].y;
-            // 우선 상하좌우 최대값을 구해서 사각형을 그리고 그 사각형 밖에 있으면 false
-            for (var iIdx = 0; iIdx < aLocation.length; iIdx++) {
-                if (iLeftX > aLocation[iIdx].x) {
-                    iLeftX = aLocation[iIdx].x;
+            var iCnt = 0;
+            for (var iCurrent = 1, iPrev = 0; iCurrent < aLocation.length; iCurrent++, iPrev++) {
+                var oCurrent = aLocation[iCurrent];
+                var oPrev = aLocation[iPrev];
+
+                if (oTarget.y >= oPrev.y && oTarget.y >= oCurrent.y) {
+                    continue;
                 }
 
-                if (iRightX < aLocation[iIdx].x) {
-                    iRightX = aLocation[iIdx].x;
+                if (oTarget.y <= oPrev.y && oTarget.y <= oCurrent.y) {
+                    continue;
                 }
 
-                if (iTopY > aLocation[iIdx].y) {
-                    iTopY = aLocation[iIdx].y;
+                var fAround;
+                if (oCurrent.x === oPrev.x) {
+                    fAround = oCurrent.x;
+                } else {
+                    var fInclination = (oCurrent.y - oPrev.y) / (oCurrent.x - oPrev.x);
+                    var fIntercept = oCurrent.y - (fInclination * oCurrent.x);
+
+                    fAround = (y - fIntercept) / fInclination;
                 }
 
-                if (iBottomY < aLocation[iIdx].y) {
-                    iBottomY = aLocation[iIdx].y;
+                if (x >= fAround) {
+                    iCnt++;
                 }
             }
-
-            if (oTarget.x < iLeftX - iAllowGapSize || oTarget.x > iRightX + iAllowGapSize || oTarget.y < iTopY - iAllowGapSize || oTarget.y > iBottomY + iAllowGapSize) {
+            if (iCnt === 0) {
                 return false;
+            } else if (iCnt % 2 === 1) {
+                return true;
             }
-
-            return true;
         }
 
         function _checkSquare(aLocation) {
@@ -1027,7 +1022,6 @@
     }
 
     $.canvasAreasDraw.prototype.setLabel = function (options) {
-        console.log(this._aAreas);
         if (isObject(this._aAreas[options.id]) === false) {
             return false;
         }

@@ -25,6 +25,13 @@
         }
     };
 
+    const KEYCODE_CTRL = 17;
+    const KEYCODE_ALT = 18;
+    const KEYCODE_COMPLETE = 13;
+    const KEYCODE_ZOOM = 16;
+    const KEYCODE_PRINT = 80;
+    const KEYCODE_CANCEL = 27;
+
     $.canvasAreasDraw.prototype.init = function (oObj, oCustomOptions) {
         var oThis = this;
         var oDefaultOptions = {
@@ -115,7 +122,7 @@
                 oThis.keyCode.sort();
             }
 
-            if (_keyCheck() === 'completing' && oThis.status === 'drawing' && isObject(oThis._aAreas[oThis._iAreaIdx]) === true && oThis._aAreas[oThis._iAreaIdx].getLength() >= 3) {
+            if (oThis.keyCode.indexOf(KEYCODE_COMPLETE) !== -1 && oThis.status === 'drawing' && isObject(oThis._aAreas[oThis._iAreaIdx]) === true && oThis._aAreas[oThis._iAreaIdx].getLength() >= 3) {
                 oThis._aAreas[oThis._iAreaIdx].locations.push({
                     x: oThis._aAreas[oThis._iAreaIdx].locations[0].x,
                     y: oThis._aAreas[oThis._iAreaIdx].locations[0].y
@@ -131,13 +138,29 @@
                 _callOnCreated();
 
                 return false;
-            } else if (_keyCheck() === 'zoom' && oThis.options.allowZoom === true) {
+            } else if (oThis.keyCode.indexOf(KEYCODE_ZOOM) !== -1 && oThis.options.allowZoom === true) {
                 oThis.canvas.addEventListener('mousemove', _zoom);
                 oThis.canvas.addEventListener('mousedown', _zoom);
                 oThis.canvas.addEventListener('contextmenu', _zoom);
                 oThis.canvas.addEventListener('mouseout', _mouseOut);
 
                 oThis.zoomLayer.css('display', 'inline');
+            } else if (oThis.keyCode.indexOf(KEYCODE_CANCEL) !== -1) {
+                for (var iIdx = 0; iIdx <= oThis._iAreaIdx; iIdx++) {
+                    if (isObject(oThis._aAreas[iIdx]) === false) {
+                        continue;
+                    }
+
+                    oThis._aAreas[iIdx].isActive = false;
+                }
+
+                if (oThis.status === 'drawing') {
+                    oThis._aAreas[oThis._iAreaIdx].isActive = true;
+                }
+
+                oThis.draw();
+            } else if (oThis.keyCode.indexOf(KEYCODE_PRINT) !== -1) {
+                console.log(oThis._aAreas);
             }
         }
 
@@ -149,7 +172,7 @@
                 oThis.keyCode.sort();
             }
 
-            if (e.keyCode === 16 && oThis.options.allowZoom === true) {
+            if (e.keyCode === KEYCODE_ZOOM && oThis.options.allowZoom === true) {
                 oThis.canvas.removeEventListener('mousemove', _zoom);
                 oThis.canvas.removeEventListener('mousedown', _zoom);
                 oThis.canvas.removeEventListener('contextmenu', _zoom);
@@ -265,27 +288,6 @@
             _callOnCreated();
         }
 
-        function _keyCheck() {
-            var squareMode = JSON.stringify([17]);
-            var separatingMode = JSON.stringify([17, 18]);
-            var completeDraw = JSON.stringify([13]);
-            var zoomMode = JSON.stringify([16]);
-
-            var checkValue = JSON.stringify(oThis.keyCode);
-
-            if (oThis.keyCode.length === 0) {
-                return '';
-            } else if (checkValue === squareMode) {
-                return 'square';
-            } else if (checkValue === separatingMode) {
-                return 'separating';
-            } else if (checkValue === completeDraw) {
-                return 'completing';
-            } else if (checkValue === zoomMode) {
-                return 'zoom';
-            }
-        }
-
         this._stopDrag = function () {
             oThis.canvas.removeEventListener('mousemove', _movePoint);
             oThis.canvas.removeEventListener('mousemove', _moveRegion);
@@ -296,7 +298,6 @@
 
             oThis.aSelectedPoint = [];
             oThis.oOriginPosition = null;
-            oThis._iActiveBlock = null;
 
             $(oThis.canvas).css('cursor', 'default');
         }
@@ -375,7 +376,7 @@
             }
             var iLength = oThis._aAreas[aSelectedPoint[0]].getLength();
 
-            if (_keyCheck() === 'square' && _checkSquare(oThis._aAreas[aSelectedPoint[0]].locations) === true) {
+            if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 && oThis.keyCode.indexOf(KEYCODE_ALT) === -1 && _checkSquare(oThis._aAreas[aSelectedPoint[0]].locations) === true) {
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].x = oTarget.x;
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].y = oTarget.y;
                 switch (aSelectedPoint[1]) {
@@ -459,10 +460,6 @@
             var canvas = $(oThis.canvas)[0];
             var options = oThis.options;
 
-            if (e.which === 3) {
-                return false;
-            }
-
             e.preventDefault();
             // 좌표 구하기
             var oTarget = _getMousePosition(e);
@@ -475,6 +472,7 @@
                 return false;
             }
 
+            console.log(oThis._iActiveBlock);
             // 모든 영역은 비활성화
             for (var iIdx = 0; iIdx <= oThis._iAreaIdx; iIdx++) {
                 if (isObject(oThis._aAreas[iIdx]) === false) {
@@ -485,18 +483,31 @@
 
             // 선택한 좌표가 이미 선택된 좌표인지 검사해서 이미 선택된 좌표이면 드래그 활성화
             var findFlag = false;
+            var aAreaIndex = [];
+            if (oThis._iActiveBlock !== null && isObject(oThis._aAreas[oThis._iActiveBlock]) === true) {
+                aAreaIndex.push(oThis._iActiveBlock);
+            } else {
+                oThis._iActiveBlock = null;
+            }
+
             for (var iIdx = 0; iIdx <= oThis._iAreaIdx; iIdx++) {
-                if (isObject(oThis._aAreas[iIdx]) === false) {
+                if (isObject(oThis._aAreas[iIdx]) === false || iIdx === oThis._iActiveBlock) {
                     continue;
                 }
 
-                oThis._aAreas[iIdx].locations.forEach(function (value, key, array) {
+                aAreaIndex.push(iIdx);
+            }
+
+            for (var iIdx = 0; iIdx < aAreaIndex.length; iIdx++) {
+                var iAreaIdx = aAreaIndex[iIdx];
+
+                oThis._aAreas[iAreaIdx].locations.forEach(function (value, key, array) {
                     var gapX = Math.abs(oTarget.x - value.x);
                     var gapY = Math.abs(oTarget.y - value.y);
 
                     if (gapX <= options.allowGapSize && gapY <= options.allowGapSize) {
                         if (findFlag === false && (key !== 0 || oThis.status === 'ready')) {
-                            if (_keyCheck() === 'separating') {
+                            if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 && oThis.keyCode.indexOf(KEYCODE_ALT) !== -1) {
                                 oThis.status = 'separating';
                                 oThis._separatingPosition = [
                                     {
@@ -504,13 +515,15 @@
                                         y: value.y
                                     }
                                 ];
-                                oThis._aAreas[iIdx].isActive = true;
+                                oThis._aAreas[iAreaIdx].isActive = true;
 
                                 oThis.draw();
                             } else {
                                 canvas.addEventListener('mousemove', _movePoint);
                             }
-                            oThis._aSelectedPosition = [iIdx, key];
+                            oThis._aSelectedPosition = [iAreaIdx, key];
+                            console.log(oThis._aAreas[iAreaIdx]);
+                            console.log(oThis._aSelectedPosition);
 
                             findFlag = true;
                             return false;
@@ -524,21 +537,21 @@
 
                 if (oThis.status === 'ready') {
                     // 블록이 완성된 상태에서 선 위를 클릭하면 해당 블록에 좌표 추가
-                    var iLength = oThis._aAreas[iIdx].getLength();
+                    var iLength = oThis._aAreas[iAreaIdx].getLength();
                     for (var iIdx2 = 1; iIdx2 < iLength; iIdx2++) {
-                        if (_checkPointOnLine(oTarget, oThis._aAreas[iIdx].locations[iIdx2 - 1], oThis._aAreas[iIdx].locations[iIdx2]) === true) {
-                            oThis._aAreas[iIdx].locations.splice(iIdx2, 0, oTarget);
-                            oThis._aAreas[iIdx].isActive = true;
+                        if (_checkPointOnLine(oTarget, oThis._aAreas[iAreaIdx].locations[iIdx2 - 1], oThis._aAreas[iAreaIdx].locations[iIdx2]) === true) {
+                            oThis._aAreas[iAreaIdx].locations.splice(iIdx2, 0, oTarget);
+                            oThis._aAreas[iAreaIdx].isActive = true;
 
                             oThis.draw();
                             return false;
                         }
                     }
 
-                    if (_checkInside(oTarget, oThis._aAreas[iIdx].locations) === true) {
-                        oThis._aAreas[iIdx].isActive = true;
+                    if (_checkInside(oTarget, oThis._aAreas[iAreaIdx].locations) === true) {
+                        oThis._aAreas[iAreaIdx].isActive = true;
                         oThis.oOriginPosition = oTarget;
-                        oThis._iActiveBlock = iIdx;
+                        oThis._iActiveBlock = iAreaIdx;
 
                         _callOnSelected()
                         canvas.addEventListener('mousemove', _moveRegion);
@@ -554,7 +567,10 @@
                 oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(oThis._iAreaIdx);
                 oThis._aAreas[oThis._iAreaIdx].setColor(oThis.options.defaultColor);
 
-                if (_keyCheck() === 'square') { // Control 키를 누른 상태에서 좌표를 찍으면 사각형을 만든다.
+                console.log(oThis.keyCode);
+                console.log(oThis.keyCode.indexOf(KEYCODE_CTRL));
+                console.log(oThis.keyCode.indexOf(KEYCODE_ALT));
+                if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 && oThis.keyCode.indexOf(KEYCODE_ALT) === -1) { // Control 키를 누른 상태에서 좌표를 찍으면 사각형을 만든다.
                     oThis.oOriginPosition = oTarget;
 
                     // 사각형을 만든다.

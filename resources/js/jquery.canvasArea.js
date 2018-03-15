@@ -87,6 +87,8 @@
                     var oArea = new AreaStruct(value.id);
                     if (value.color) {
                         oArea.setColor(value.color);
+                    } else {
+                        oArea.setColor(oThis.options.defaultColor);
                     }
 
                     if (value.label) {
@@ -106,7 +108,12 @@
                     oArea.isActive = false;
 
                     oThis._aAreas.push(oArea);
+
+                    if (oThis._iAreaIdx < value.id) {
+                        oThis._iAreaIdx = value.id;
+                    }
                 });
+                oThis._iAreaIdx++;
 
                 oThis.draw();
             }

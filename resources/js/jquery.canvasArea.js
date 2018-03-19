@@ -205,6 +205,7 @@
 
                         if (iActiveIdx > 0) {
                             $('#trash-' + oThis._aAreas[oThis._aActiveBlock[iActiveIdx]].id).remove();
+                            oThis._callOnDeleted(oThis._aAreas[oThis._aActiveBlock[iActiveIdx]].id);
                             oThis._aAreas.splice(oThis._aActiveBlock[iActiveIdx], 1);
                         }
                     }
@@ -959,7 +960,7 @@
 
         function _callOnCreated() {
             if (oThis.options.onCreated !== null) {
-                oThis.options.onCreated.call(oThis, oThis._iAreaIdx - 1);
+                oThis.options.onCreated.call(oThis, [oThis._aAreas[oThis._iAreaIdx - 1]]);
             }
         }
 
@@ -1040,6 +1041,12 @@
             oThis.zoomLayer.css('display', 'none');
         }
 
+        this._callOnDeleted = function (iDeleteKey) {
+            if (oThis.options.onDeleted !== null) {
+                oThis.options.onDeleted.call(this, iDeleteKey);
+            }
+        };
+
         if (this.options.allowEdit === true) {
             oThis.canvas.addEventListener('mousedown', this._mouseDown);
             oThis.canvas.addEventListener('contextmenu', this._rightDown);
@@ -1071,11 +1078,7 @@
         var oThis = this;
         drawAction();
 
-        var _callOnDeleted = function (iDeleteKey) {
-            if (oThis.options.onDeleted !== null) {
-                oThis.options.onDeleted.call(this, iDeleteKey);
-            }
-        };
+        var _callOnDeleted = oThis._callOnDeleted;
 
         function drawAction() {
             // 캔버스 초기화

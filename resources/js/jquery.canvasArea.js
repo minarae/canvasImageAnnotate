@@ -1312,11 +1312,17 @@
     }
 
     $.canvasAreasDraw.prototype.setColor = function (options) {
-        if (isObject(this._aAreas[options.id]) === false) {
-            return false;
+        for (var iIdx = 0; iIdx <= this._aAreas.length; iIdx++) {
+            if (isObject(this._aAreas[iIdx]) === false) {
+                continue;
+            }
+
+            if (this._aAreas[iIdx].id.toString() === options.id.toString()) {
+                this._aAreas[iIdx].setColor(options.color);
+                break;
+            }
         }
 
-        this._aAreas[options.id].setColor(options.color);
         this.draw();
 
         return true;
@@ -1338,17 +1344,17 @@
             if (isObject(this._aAreas[iIdx]) === false) {
                 continue;
             }
-            this._aAreas[iIdx].isActive = false;
+
+            if (this._aAreas[iIdx].id.toString() === id.toString()) {
+                this._aAreas[iIdx].isActive = true;
+            } else {
+                this._aAreas[iIdx].isActive = false;
+            }
         }
 
-        if (isObject(this._aAreas[id]) === false) {
-            return false;
-        }
-
-        this._aAreas[id].isActive = true;
         this.draw();
 
-        return true;
+        return false;
     }
 
     $.canvasAreasDraw.prototype.areas = function () {

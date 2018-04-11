@@ -12,18 +12,20 @@
     <div id="main" class="container">
         <h4>Image Annotation System based on canvas</h4>
         <canvas id="viewport"></canvas>
+        <canvas id="canvasOutput" style="display:none;"></canvas>
         <br/>
-        <button type="button" id="chgColor">change color</button>
         <input type="file" id="image">
 
         <input type="number" id="id" value="0">
         <button type="button" id="focus">focus</button>
+        <button type="button" id="chgColor">change color</button>
         <button type="button" id="getResult">get Result</button>
         <button type="button" id="reset">reset</button>
     </div>
     <script language="javascript" src="./resources/js/jquery-3.3.1.min.js"></script>
     <script language="javascript" src="./resources/js/jquery.canvasArea.js"></script>
-    <script language="javascript" async defer src="./resources/js/opencv.js"></script>
+    <script language="javascript" src="./resources/js/opencv.js"></script>
+    <script language="javascript" src="./resources/js/magic-wand.js"></script>
     <script>
         $('#viewport').canvasAreas({
             allowEdit: true,
@@ -41,9 +43,7 @@
         fileInput.addEventListener('change', function(e) {
             var files = e.target.files;
             if (files.length > 0) {
-                console.log(files);
                 var imgUrl = URL.createObjectURL(files[0]);
-                console.log(imgUrl);
                 $('#viewport').attr('data-image-url', imgUrl);
                 $('#viewport').canvasAreas('reset', {
                     areas: []
@@ -62,7 +62,7 @@
 
         $('#chgColor').click(function () {
             $('#viewport').canvasAreas('setColor', {
-                id: 1,
+                id: $('#id').val(),
                 color: getRandomColor()
             });
         });

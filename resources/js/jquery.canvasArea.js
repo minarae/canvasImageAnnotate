@@ -1050,12 +1050,14 @@ var Module = {};
             window.addEventListener('keyup', this._unsetKeyDown);
         }
 
-        this.zoomLayer = $('<div>').addClass('zoom-area');
-        if (this.options.allowZoom === true) {
-            $(oObj).parent().append(this.zoomLayer);
+        if ($('.zoom-area').length === 0) {
+            this.zoomLayer = $('<div>').addClass('zoom-area');
+            if (this.options.allowZoom === true) {
+                $(oObj).parent().append(this.zoomLayer);
 
-            this.zoomCanvas = $('<canvas>').addClass('zoom-canvas');
-            this.zoomLayer.append(this.zoomCanvas);
+                this.zoomCanvas = $('<canvas>').addClass('zoom-canvas');
+                this.zoomLayer.append(this.zoomCanvas);
+            }
         }
     }
 
@@ -1404,6 +1406,8 @@ var Module = {};
     }
 
     $.canvasAreasDraw.prototype.reset = function (options) {
+        // 휴지통 아이콘 삭제
+        $('.delete-area').remove();
         this.options = $.extend(this.options, options);
         this.init(this.oObj, this.options);
     }
@@ -1559,85 +1563,58 @@ var Module = {};
         let fgdModel = new cv.Mat();
 
         let rect = new cv.Rect(iMinX, iMinY, iMaxX - iMinX, iMaxY - iMinY);
-        cv.grabCut(src, mask, rect, bgdModel, fgdModel, 3, cv.GC_INIT_WITH_RECT);
+        cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT);
 
+        var wandMask = {
+            'bounds': {
+                'maxX': iMaxX,
+                'maxY': iMaxY,
+                'minX': iMinX,
+                'minY': iMinY
+            },
+            'data': [],
+            'height': oThis.canvas.height,
+            'width': oThis.canvas.width
+        };
         var frg = [];
         for (let i = 0; i < src.rows; i++) {
             for (let j = 0; j < src.cols; j++) {
                 if (mask.ucharPtr(i, j)[0] == 0 || mask.ucharPtr(i, j)[0] == 2) {
-                    src.ucharPtr(i, j)[0] = 255;
-                    src.ucharPtr(i, j)[1] = 255;
-                    src.ucharPtr(i, j)[2] = 255;
+                    src.ucharPtr(i, j)[0] = 0;
+                    src.ucharPtr(i, j)[1] = 0;
+                    src.ucharPtr(i, j)[2] = 0;
+
+                    wandMask.data.push(0);
                 } else {
                     frg.push({
                         x: j,
                         y: i
                     });
+
+                    wandMask.data.push(1);
                 }
             }
         }
 
-        // 외곽선 좌표만 추출
-        var arrange = [];
-        for (let i = 0; i < frg.length; i++) {
-            if (i === 0) {
-                arrange.push(frg[i]);
-                continue;
-            }
+        var cs = MagicWand.traceContours(wandMask);
+        cs = MagicWand.simplifyContours(cs, 4, 0);
 
-            if (i === frg.length - 1) {
-                arrange.push(frg[i]);
-                continue;
-            }
-
-            if (frg[i].y === frg[i - 1].y && frg[i].y === frg[i + 1].y && frg[i].x === frg[i - 1].x + 1 && frg[i].x + 1 === frg[i + 1].x) {
-                continue;
-            }
-
-            arrange.push(frg[i]);
-        }
-
-        // 그래프를 그릴 수 있도록 좌표 정렬
         var result = [];
-        for (let i = 0, idx = 0; i < arrange.length; i++, idx++) {
-            let tmp = [];
-            tmp.push(arrange[i]);
+        for (let i = 0; i < cs.length; i++) {
+            if (cs[i].inner === true) continue;
+            if (cs[i].points.length <= 20) continue;
 
-            while(1) {
-                i++;
-                if (i >= arrange.length - 1 || arrange[i].y !== arrange[i + 1].y) {
-                    break;
-                }
+            var ps = cs[i].points;
+
+            for (let j = 0; j < ps.length; j++) {
+                result.push({
+                    x: ps[j].x,
+                    y: ps[j].y
+                });
             }
-            tmp.push(arrange[i]);
-            result.splice(idx, 0, tmp[0], tmp[1]);
+            break;
         }
 
-        // 필요없는 좌표는 삭제하고 중요한 외곽선만 추출
-        var gap = 5;
-        for (let i = 1; result[i] !== undefined; ) {
-            if (result[i + 1] === undefined) {
-                break;
-            }
-            if (Math.abs(result[i].x - result[i - 1].x) <= gap && Math.abs(result[i + 1].x - result[i].x) <= gap) {
-                result.splice(i, 1);
-                continue;
-            }
-
-            if (Math.abs(result[i].y - result[i - 1].y) <= gap && Math.abs(result[i + 1].y - result[i].y) <= gap) {
-                result.splice(i, 1);
-                continue;
-            }
-
-            let equation1 = getEquation(result[i - 1], result[i]);
-            let equation2 = getEquation(result[i], result[i + 1]);
-            if (Math.abs(equation1.gradient - equation2.gradient) <= gap && Math.abs(equation1.intercept - equation2.intercept) <= gap) {
-                result.splice(i, 1);
-                continue;
-            }
-
-            i++;
-        }
         console.log(result);
         result.push({
             x: result[0].x,
@@ -1647,8 +1624,13 @@ var Module = {};
         oThis._aAreas[oThis._aActiveBlock[0]].locations = result;
         oThis.draw();
 
-        document.body.removeChild(document.getElementById('grabcut-target'));
+        //$('#canvasOutput').css('display', 'block').css('width', img.width).css('height', img.height);
+        cv.imshow('canvasOutput', src);
+
         src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete();
+
+        var output = document.getElementById('canvasOutput');
+        document.body.removeChild(document.getElementById('grabcut-target'));
     }
 
     var getEquation = function (iPoint1, iPoint2) {

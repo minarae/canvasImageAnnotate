@@ -1,80 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Canvas Area Draw</title>
-    <link rel="stylesheet" href="./resources/css/jquery.canvasArea.css" type="text/css"/>
+    <link rel="stylesheet" href="./resources/css/jquery.canvasArea.css" type="text/css" />
 </head>
+
 <body>
-<div id="main" class="container">
-    <h1>Image Annotation System based on canvas</h1>
-    <canvas id="viewport" data-image-url="./resources/images/49b74bffbad7e767f3894dc80a5301e7.jpg"></canvas>
-    <br/>
-    <button type="button" id="chgColor">change color</button>
+    <div id="main" class="container">
+        <h4>Image Annotation System based on canvas</h4>
+        <canvas id="viewport"></canvas>
+        <br/>
+        <button type="button" id="chgColor">change color</button>
+        <input type="file" id="image">
 
-    <input type="number" id="id" value="0">
-    <button type="button" id="focus">focus</button>
-    <button type="button" id="getResult">get Result</button>
-    <button type="button" id="reset">reset</button>
-</div>
-<script language="javascript" src="./resources/js/jquery-3.3.1.min.js"></script>
-<script language="javascript" src="./resources/js/jquery.canvasArea.js"></script>
-<script>
-    $('#viewport').canvasAreas({
-        allowEdit: true,
-        allowGapSize: 10,
-        allowResize: true,
-        allowZoom: true,
-        onCreated: created,
-        onSelected: checkSelect,
-        onDeleted: deleted,
-        zoomSize: 200,
-        areas: [
-            {
-                id: 0,
-                color: '#ff1212',
-                locations: [[200, 200], [200, 400], [400, 400], [400, 200]]
+        <input type="number" id="id" value="0">
+        <button type="button" id="focus">focus</button>
+        <button type="button" id="getResult">get Result</button>
+        <button type="button" id="reset">reset</button>
+    </div>
+    <script language="javascript" src="./resources/js/jquery-3.3.1.min.js"></script>
+    <script language="javascript" src="./resources/js/jquery.canvasArea.js"></script>
+    <script language="javascript" async defer src="./resources/js/opencv.js"></script>
+    <script>
+        $('#viewport').canvasAreas({
+            allowEdit: true,
+            allowSelect: true,
+            allowGapSize: 3,
+            allowZoom: true,
+            onCreated: created,
+            onSelected: checkSelect,
+            onDeleted: deleted,
+            zoomSize: 200,
+            areas: []
+        });
+
+        var fileInput = document.getElementById('image');
+        fileInput.addEventListener('change', function(e) {
+            var files = e.target.files;
+            if (files.length > 0) {
+                console.log(files);
+                var imgUrl = URL.createObjectURL(files[0]);
+                console.log(imgUrl);
+                $('#viewport').attr('data-image-url', imgUrl);
+                $('#viewport').canvasAreas('reset', {
+                    areas: []
+                });
             }
-        ]
-    });
+        });
 
-    var color = ['#ABABAB', '#123123', '#789789', '#CBACBA'];
-    var colorIdx = 0;
-    $('#chgColor').click(function () {
-        $('#viewport').canvasAreas('setColor', {id: 0, color: color[colorIdx]});
-
-        colorIdx++;
-        if (colorIdx === color.length) {
-            colorIdx = 0;
+        function getRandomColor() {
+            var letters = '0123456789ABCDEF';
+            var color = '#';
+            for (var i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
         }
-    });
 
-    $('#focus').click(function () {
-        $('#viewport').canvasAreas('focusArea', $('#id').val());
-    });
+        $('#chgColor').click(function () {
+            $('#viewport').canvasAreas('setColor', {
+                id: 1,
+                color: getRandomColor()
+            });
+        });
 
-    $('#getResult').click(function () {
-        var result = $('#viewport').canvasAreas('areas');
-        console.log(result);
-    });
+        $('#focus').click(function () {
+            $('#viewport').canvasAreas('focusArea', $('#id').val());
+        });
 
-    $('#reset').click(function () {
-        $('#viewport').attr('data-image-url', 'https://mdn.mozillademos.org/files/4553/Capitan_Meadows,_Yosemite_National_Park.jpg');
-        $('#viewport').canvasAreas('reset', {areas: []});
-    });
+        $('#getResult').click(function () {
+            var result = $('#viewport').canvasAreas('areas');
+            console.log(result);
+        });
 
-    function created(sId) {
-        console.log(sId);
-    }
+        $('#reset').click(function () {
+            $('#viewport').attr('data-image-url',
+                'https://mdn.mozillademos.org/files/4553/Capitan_Meadows,_Yosemite_National_Park.jpg');
+            $('#viewport').canvasAreas('reset', {
+                areas: []
+            });
+        });
 
-    function deleted(sId) {
-        console.log(sId);
-    }
+        function created(sId) {
+            console.log(sId);
+        }
 
-    function checkSelect(options) {
-        console.log(options);
-    }
-</script>
+        function deleted(sId) {
+            console.log(sId);
+        }
+
+        function checkSelect(options) {
+            //console.log(options);
+        }
+    </script>
 </body>
+
 </html>

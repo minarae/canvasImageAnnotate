@@ -1,3 +1,5 @@
+var Module = {};
+
 (function ($) {
     $.canvasAreasDraw = function () { };
 
@@ -36,6 +38,8 @@
     const KEYCODE_PRINT = 80;
     const KEYCODE_CANCEL = 27;
 
+    const KEYCODE_G = 71;
+
     $.canvasAreasDraw.prototype.init = function (oObj, oCustomOptions) {
         var oThis = this;
         var oDefaultOptions = {
@@ -68,7 +72,7 @@
 
         // 캔버스
         this.canvas = $(oObj)[0];
-        this.ctx = this.canvas.getContext('2d');
+        //this.ctx = this.canvas.getContext('2d');
 
         // 이미지 객체 생성
         if (this.oImage === undefined) {
@@ -250,6 +254,8 @@
                 oThis.canvas.addEventListener('mouseout', _mouseOut);
 
                 oThis.zoomLayer.css('display', 'inline');
+            } else if (oThis.keyCode.indexOf(KEYCODE_G) !== -1) {
+                grabcut(oThis);
             } else if (oThis.keyCode.indexOf(KEYCODE_PRINT) !== -1) {
                 console.log(oThis._aAreas);
             }
@@ -466,7 +472,7 @@
             }
             var iLength = oThis._aAreas[aSelectedPoint[0]].locations.length;
 
-            if (oThis.keyCode.indexOf(KEYCODE_ALT) !== -1 && oThis.keyCode.indexOf(KEYCODE_CTRL) === -1 && _checkSquare(oThis._aAreas[aSelectedPoint[0]].locations) === true) {
+            if (oThis.keyCode.indexOf(KEYCODE_ALT) !== -1 && oThis.keyCode.indexOf(KEYCODE_CTRL) === -1 && checkSquare(oThis._aAreas[aSelectedPoint[0]].locations) === true) {
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].x = oTarget.x;
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].y = oTarget.y;
                 switch (aSelectedPoint[1]) {
@@ -940,24 +946,6 @@
             }
         }
 
-        function _checkSquare(aLocation) {
-            if (aLocation.length !== 5) {
-                return false;
-            }
-
-            for (var iIdx = 1; iIdx < 5; iIdx++) {
-                if (aLocation[iIdx].x !== aLocation[iIdx - 1].x && aLocation[iIdx].y !== aLocation[iIdx - 1].y) {
-                    return false;
-                }
-            }
-
-            if (aLocation[0].x !== aLocation[4].x || aLocation[0].y !== aLocation[4].y) {
-                return false;
-            } else {
-                return true;
-            }
-        }
-
         function _callOnCreated() {
             if (oThis.options.onCreated !== null) {
                 oThis.options.onCreated.call(oThis, [oThis._aAreas[oThis._iAreaIdx - 1]]);
@@ -1074,7 +1062,7 @@
     $.canvasAreasDraw.prototype.draw = function () {
         var aAreas = this._aAreas;
         var aSeparating = this._separatingPosition;
-        var ctx = this.ctx;
+        let ctx = this.canvas.getContext('2d');
         var oThis = this;
         drawAction();
 
@@ -1204,6 +1192,7 @@
             }
 
             ctx.drawImage(oThis.oImage, 0, 0);
+            //ctx.drawImage(oImg, 0, 0);
         }
 
         function _postProcessDrawing(ctx, oBlock) {
@@ -1485,4 +1474,191 @@
 
         return iMaxDepth;
     }
+
+    var checkSquare = function (aLocation) {
+        if (aLocation.length !== 5) {
+            return false;
+        }
+
+        for (var iIdx = 1; iIdx < 5; iIdx++) {
+            if (aLocation[iIdx].x !== aLocation[iIdx - 1].x && aLocation[iIdx].y !== aLocation[iIdx - 1].y) {
+                return false;
+            }
+        }
+
+        if (aLocation[0].x !== aLocation[4].x || aLocation[0].y !== aLocation[4].y) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    var grabcut = function (oThis) {
+        if (oThis._aActiveBlock.length !== 1) {
+            return false;
+        }
+
+        var oBlock = oThis._aAreas[oThis._aActiveBlock[0]];
+        if (isObject(oBlock) === false) {
+            return false;
+        }
+
+        var locations = oBlock.locations;
+        if (checkSquare(locations) === false) {
+            return false;
+        }
+
+        // find start position and width, height
+        var iMinX = oThis.canvas.width;
+        var iMinY = oThis.canvas.height;
+        var iMaxX = 0;
+        var iMaxY = 0;
+        for (var i in locations) {
+            if (iMinX > locations[i].x) {
+                iMinX = locations[i].x;
+            }
+
+            if (iMinY > locations[i].y) {
+                iMinY = locations[i].y;
+            }
+
+            if (iMaxX < locations[i].x) {
+                iMaxX = locations[i].x;
+            }
+
+            if (iMaxY < locations[i].y) {
+                iMaxY = locations[i].y;
+            }
+        }
+
+        if (iMinX < 0) {
+            iMinX = 0;
+        }
+
+        if (iMinY < 0) {
+            iMinY = 0;
+        }
+
+        if (iMaxX < oThis.canvas.width) {
+            iMaxX = oThis.canvas.width;
+        }
+
+        if (iMaxY < oThis.canvas.height) {
+            iMaxY = oThis.canvas.height;
+        }
+
+        var img = document.createElement('img');
+        img.id = 'grabcut-target';
+        img.src = $(oThis.oObj).attr('data-image-url');
+        document.body.appendChild(img);
+
+        var src = cv.imread('grabcut-target');
+        cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
+        let mask = new cv.Mat();
+        let bgdModel = new cv.Mat();
+        let fgdModel = new cv.Mat();
+
+        let rect = new cv.Rect(iMinX, iMinY, iMaxX - iMinX, iMaxY - iMinY);
+        cv.grabCut(src, mask, rect, bgdModel, fgdModel, 3, cv.GC_INIT_WITH_RECT);
+
+        var frg = [];
+        for (let i = 0; i < src.rows; i++) {
+            for (let j = 0; j < src.cols; j++) {
+                if (mask.ucharPtr(i, j)[0] == 0 || mask.ucharPtr(i, j)[0] == 2) {
+                    src.ucharPtr(i, j)[0] = 255;
+                    src.ucharPtr(i, j)[1] = 255;
+                    src.ucharPtr(i, j)[2] = 255;
+                } else {
+                    frg.push({
+                        x: j,
+                        y: i
+                    });
+                }
+            }
+        }
+
+        // 외곽선 좌표만 추출
+        var arrange = [];
+        for (let i = 0; i < frg.length; i++) {
+            if (i === 0) {
+                arrange.push(frg[i]);
+                continue;
+            }
+
+            if (i === frg.length - 1) {
+                arrange.push(frg[i]);
+                continue;
+            }
+
+            if (frg[i].y === frg[i - 1].y && frg[i].y === frg[i + 1].y && frg[i].x === frg[i - 1].x + 1 && frg[i].x + 1 === frg[i + 1].x) {
+                continue;
+            }
+
+            arrange.push(frg[i]);
+        }
+
+        // 그래프를 그릴 수 있도록 좌표 정렬
+        var result = [];
+        for (let i = 0, idx = 0; i < arrange.length; i++, idx++) {
+            let tmp = [];
+            tmp.push(arrange[i]);
+
+            while(1) {
+                i++;
+                if (i >= arrange.length - 1 || arrange[i].y !== arrange[i + 1].y) {
+                    break;
+                }
+            }
+            tmp.push(arrange[i]);
+            result.splice(idx, 0, tmp[0], tmp[1]);
+        }
+
+        // 필요없는 좌표는 삭제하고 중요한 외곽선만 추출
+        var gap = 5;
+        for (let i = 1; result[i] !== undefined; ) {
+            if (result[i + 1] === undefined) {
+                break;
+            }
+            if (Math.abs(result[i].x - result[i - 1].x) <= gap && Math.abs(result[i + 1].x - result[i].x) <= gap) {
+                result.splice(i, 1);
+                continue;
+            }
+
+            if (Math.abs(result[i].y - result[i - 1].y) <= gap && Math.abs(result[i + 1].y - result[i].y) <= gap) {
+                result.splice(i, 1);
+                continue;
+            }
+
+            let equation1 = getEquation(result[i - 1], result[i]);
+            let equation2 = getEquation(result[i], result[i + 1]);
+            if (Math.abs(equation1.gradient - equation2.gradient) <= gap && Math.abs(equation1.intercept - equation2.intercept) <= gap) {
+                result.splice(i, 1);
+                continue;
+            }
+
+            i++;
+        }
+        console.log(result);
+        result.push({
+            x: result[0].x,
+            y: result[0].y,
+        });
+
+        oThis._aAreas[oThis._aActiveBlock[0]].locations = result;
+        oThis.draw();
+
+        document.body.removeChild(document.getElementById('grabcut-target'));
+        src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete();
+    }
+
+    var getEquation = function (iPoint1, iPoint2) {
+        var gradient = (iPoint2.y - iPoint1.y) / (iPoint2.x - iPoint1.x);
+        var intercept = iPoint2.y - gradient * iPoint2.x;
+
+        return {
+            'gradient': gradient,
+            'intercept': intercept
+        };
+    }
+
 })(jQuery);

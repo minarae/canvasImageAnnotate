@@ -70,6 +70,8 @@ var Module = {};
 
         this._separatingPosition = [];
 
+        this.guideLine = null;
+
         // 캔버스
         this.canvas = $(oObj)[0];
         //this.ctx = this.canvas.getContext('2d');
@@ -92,6 +94,9 @@ var Module = {};
                 oThis.canvas.height = oThis.oImage.height;
 
                 oThis.options.areas.forEach(function (value, index, array) {
+                    if (value.locations.length <= 3) {
+                        return true;
+                    }
                     var oArea = new AreaStruct(value.id);
                     if (value.color) {
                         oArea.setColor(value.color);
@@ -375,7 +380,8 @@ var Module = {};
 
             for (; isObject(oThis._aAreas[oThis._iAreaIdx]) === true; oThis._iAreaIdx++) { }
             oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(oThis._iAreaIdx);
-            oThis._aAreas[oThis._iAreaIdx].setColor(oThis._aAreas[oThis._aSelectedPosition[0]].color);
+            //oThis._aAreas[oThis._iAreaIdx].setColor(oThis._aAreas[oThis._aSelectedPosition[0]].color);
+            oThis._aAreas[oThis._iAreaIdx].setColor(getRandomColor());
             oThis._aAreas[oThis._iAreaIdx].setLabel(oThis._aAreas[oThis._aSelectedPosition[0]].label);
             oThis._aAreas[oThis._iAreaIdx].locations = aEnd;
 
@@ -394,6 +400,8 @@ var Module = {};
 
             oThis.aSelectedPoint = [];
             oThis.oOriginPosition = null;
+
+            oThis.guideLine = null;
 
             $(oThis.canvas).css('cursor', 'default');
         }
@@ -473,6 +481,13 @@ var Module = {};
             var iLength = oThis._aAreas[aSelectedPoint[0]].locations.length;
 
             if (oThis.keyCode.indexOf(KEYCODE_ALT) !== -1 && oThis.keyCode.indexOf(KEYCODE_CTRL) === -1 && checkSquare(oThis._aAreas[aSelectedPoint[0]].locations) === true) {
+                $(oThis.canvas).css('cursor', 'crosshair');
+
+                oThis.guideLine = {
+                    x: oTarget.x,
+                    y: oTarget.y
+                };
+
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].x = oTarget.x;
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].y = oTarget.y;
                 switch (aSelectedPoint[1]) {
@@ -1193,6 +1208,20 @@ var Module = {};
                 ctx.stroke();
             }
 
+            if (oThis.guideLine !== null) {
+                ctx.beginPath();
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#000000';
+
+                ctx.moveTo(oThis.guideLine.x, 0);
+                ctx.lineTo(oThis.guideLine.x, oThis.canvas.height);
+
+                ctx.moveTo(0, oThis.guideLine.y);
+                ctx.lineTo(oThis.canvas.width, oThis.guideLine.y);
+
+                ctx.stroke();
+            }
+
             ctx.drawImage(oThis.oImage, 0, 0);
             //ctx.drawImage(oImg, 0, 0);
         }
@@ -1563,7 +1592,15 @@ var Module = {};
         let fgdModel = new cv.Mat();
 
         let rect = new cv.Rect(iMinX, iMinY, iMaxX - iMinX, iMaxY - iMinY);
-        cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT);
+        // let dst = new cv.Mat();
+
+        // cv.bilateralFilter(src, dst, 9, 75, 75, cv.BORDER_DEFAULT);
+
+        // cv.imshow('canvasOutput', src);
+
+        // src = cv.imread('canvasOutput');
+        // cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
+        cv.grabCut(src, mask, rect, bgdModel, fgdModel, 5, cv.GC_INIT_WITH_RECT);
 
         var wandMask = {
             'bounds': {
@@ -1597,12 +1634,16 @@ var Module = {};
         }
 
         var cs = MagicWand.traceContours(wandMask);
-        cs = MagicWand.simplifyContours(cs, 4, 0);
+        cs = MagicWand.simplifyContours(cs, 2, 0);
+
+        //cv.imshow('canvasOutput', src);
+
+        src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete();
 
         var result = [];
         for (let i = 0; i < cs.length; i++) {
             if (cs[i].inner === true) continue;
-            if (cs[i].points.length <= 20) continue;
+            if (cs[i].points.length <= 10) continue;
 
             var ps = cs[i].points;
 
@@ -1616,20 +1657,20 @@ var Module = {};
         }
 
         console.log(result);
-        result.push({
-            x: result[0].x,
-            y: result[0].y,
-        });
+        if (result.length > 0) {
+            result.push({
+                x: result[0].x,
+                y: result[0].y,
+            });
 
-        oThis._aAreas[oThis._aActiveBlock[0]].locations = result;
-        oThis.draw();
+            oThis._aAreas[oThis._aActiveBlock[0]].locations = result;
+            oThis.draw();
+        }
 
+        // 이미지 디버깅용
         //$('#canvasOutput').css('display', 'block').css('width', img.width).css('height', img.height);
-        cv.imshow('canvasOutput', src);
 
-        src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete();
-
-        var output = document.getElementById('canvasOutput');
+        //var output = document.getElementById('canvasOutput');
         document.body.removeChild(document.getElementById('grabcut-target'));
     }
 
@@ -1643,4 +1684,12 @@ var Module = {};
         };
     }
 
+    var getRandomColor = function() {
+        var letters = '0123456789ABCDEF';
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
 })(jQuery);

@@ -6,7 +6,7 @@ var Module = {};
     var AreaStruct = function (sId) {
         this.id = sId;
         this.color = '#ff961e';
-        this.label = null;
+        this.label = [];
         this.isActive = true;
         this.locations = [];
 
@@ -23,7 +23,24 @@ var Module = {};
         }
 
         this.setLabel = function (label) {
-            this.label = $.trim(label);
+            // ignore empty string
+            label = $.trim(label);
+            if (label.length === 0) {
+                return;
+            }
+
+            if (this.label.indexOf(label) < 0) {
+                this.label.push($.trim(label));
+            }
+        }
+
+        this.removeLabel = function(label) {
+            var oThis = this;
+            $.each(this.label, function(key, value) {
+                if ($.trim(label) === value) {
+                    oThis.label.splice(key, 1);
+                }
+            });
         }
     };
 
@@ -143,8 +160,8 @@ var Module = {};
                     if (oThis._iAreaIdx < value.id) {
                         oThis._iAreaIdx = value.id;
                     }
+                    oThis._iAreaIdx++;
                 });
-                oThis._iAreaIdx++;
 
                 oThis.draw();
             }
@@ -253,13 +270,35 @@ var Module = {};
                     oCurArea.locations = aLocations[0];
                 }
             } else if (oThis.keyCode.indexOf(KEYCODE_SHIFT) !== -1 && oThis.options.allowZoom === true) {
-                oThis.canvas.addEventListener('mousemove', _zoom);
-                oThis.canvas.addEventListener('mousedown', _zoom);
-                oThis.canvas.addEventListener('contextmenu', _zoom);
-                oThis.canvas.addEventListener('mouseout', _mouseOut);
+                oThis.canvas.addEventListener('mousemove', _zoom, false);
+                oThis.canvas.addEventListener('mousedown', _zoom, false);
+                oThis.canvas.addEventListener('contextmenu', _zoom, false);
+                oThis.canvas.addEventListener('mouseout', _mouseOut, false);
 
                 oThis.zoomLayer.css('display', 'inline');
+            } else if (oThis.keyCode.indexOf(KEYCODE_ALT) !== -1 && oThis.keyCode.indexOf(KEYCODE_CTRL) === -1) {
+                if ((oThis._aSelectedPosition.length > 0 && isObject(oThis._aAreas[oThis._aSelectedPosition[0]]) && checkSquare(oThis._aAreas[oThis._aSelectedPosition[0]].locations) === true) || oThis.status === 'ready') {
+                    oThis.canvas.addEventListener('mousemove', _setGuideLine, false);
+                }
             } else if (oThis.keyCode.indexOf(KEYCODE_G) !== -1) {
+                /* if ($('.spinner').length === 0) {
+                    var marginTop = oThis.canvas.height / 2 + 10;
+                    var spinner = $('<div>').addClass('spinner').append(
+                        $('<div>').addClass('bounce1').css('margin-top', marginTop)
+                    ).append(
+                        $('<div>').addClass('bounce2').css('margin-top', marginTop)
+                    ).append(
+                        $('<div>').addClass('bounce3').css('margin-top', marginTop)
+                    ).css('width', oThis.canvas.width).css('height', oThis.canvas.height);
+
+                    $(oThis.oObj).before(spinner);
+
+                    while(true) {
+                        if ($('.spinner').length > 0) {
+                            break;
+                        }
+                    }
+                } */
                 grabcut(oThis);
             } else if (oThis.keyCode.indexOf(KEYCODE_PRINT) !== -1) {
                 console.log(oThis._aAreas);
@@ -276,50 +315,57 @@ var Module = {};
                 oThis.keyCode.sort();
             }
 
-            //if (e.keyCode === KEYCODE_SHIFT && oThis.options.allowZoom === true) {
-            oThis.canvas.removeEventListener('mousemove', _zoom);
-            oThis.canvas.removeEventListener('mousedown', _zoom);
-            oThis.canvas.removeEventListener('contextmenu', _zoom);
-            oThis.canvas.removeEventListener('mouseout', _mouseOut);
+            if (e.keyCode === KEYCODE_SHIFT && oThis.options.allowZoom === true) {
+                oThis.canvas.removeEventListener('mousemove', _zoom);
+                oThis.canvas.removeEventListener('mousedown', _zoom);
+                oThis.canvas.removeEventListener('contextmenu', _zoom);
+                oThis.canvas.removeEventListener('mouseout', _mouseOut);
 
-            oThis.zoomLayer.css('display', 'none');
-            //}
-
-            if (oThis.status === 'separating') { // 검사
-                var finalPosition = oThis._separatingPosition[oThis._separatingPosition.length - 1];
-                var oCurArea = oThis._aAreas[oThis._aSelectedPosition[0]];
-                var iLength = oCurArea.getLength();
-                var aLocations = oCurArea.locations;
-
-                var iGapX, iGapY;
-
-                for (var iIdx = 0; iIdx < iLength; iIdx++) {
-                    if (oThis._aSelectedPosition[1] === iLength - 1) {
-                        if (iIdx === 0 || iIdx === oThis._aSelectedPosition[1]) {
-                            continue;
-                        }
-                    } else {
-                        if (iIdx === oThis._aSelectedPosition[1]) {
-                            continue;
-                        }
-                    }
-
-                    iGapX = Math.abs(aLocations[iIdx].x - finalPosition.x);
-                    iGapY = Math.abs(aLocations[iIdx].y - finalPosition.y);
-
-                    if (iGapX <= oThis.options.allowGapSize && iGapY <= oThis.options.allowGapSize) {
-                        oThis._separatingPosition[oThis._separatingPosition.length - 1] = aLocations[iIdx];
-                        separate(iIdx);
-                        break;
-                    }
-                }
-
-                oThis.status = 'ready';
+                oThis.zoomLayer.css('display', 'none');
             }
 
-            // 나누기 종료
-            oThis._separatingPosition = [];
-            oThis._aSelectedPosition = [];
+            if (e.keyCode === KEYCODE_ALT && oThis.keyCode.indexOf(KEYCODE_CTRL) === -1) {
+                oThis.canvas.removeEventListener('mousemove', _setGuideLine);
+                oThis.guideLine = null;
+            }
+
+            if (oThis.keyCode.indexOf(KEYCODE_ALT) === -1 || oThis.keyCode.indexOf(KEYCODE_CTRL) === -1) {
+                if (oThis.status === 'separating') { // 검사
+                    var finalPosition = oThis._separatingPosition[oThis._separatingPosition.length - 1];
+                    var oCurArea = oThis._aAreas[oThis._aSelectedPosition[0]];
+                    var iLength = oCurArea.getLength();
+                    var aLocations = oCurArea.locations;
+
+                    var iGapX, iGapY;
+
+                    for (var iIdx = 0; iIdx < iLength; iIdx++) {
+                        if (oThis._aSelectedPosition[1] === iLength - 1) {
+                            if (iIdx === 0 || iIdx === oThis._aSelectedPosition[1]) {
+                                continue;
+                            }
+                        } else {
+                            if (iIdx === oThis._aSelectedPosition[1]) {
+                                continue;
+                            }
+                        }
+
+                        iGapX = Math.abs(aLocations[iIdx].x - finalPosition.x);
+                        iGapY = Math.abs(aLocations[iIdx].y - finalPosition.y);
+
+                        if (iGapX <= oThis.options.allowGapSize && iGapY <= oThis.options.allowGapSize) {
+                            oThis._separatingPosition[oThis._separatingPosition.length - 1] = aLocations[iIdx];
+                            separate(iIdx);
+                            break;
+                        }
+                    }
+
+                    oThis.status = 'ready';
+                }
+
+                // 나누기 종료
+                oThis._separatingPosition = [];
+                oThis._aSelectedPosition = [];
+            }
 
             oThis.draw();
         }
@@ -392,6 +438,21 @@ var Module = {};
             oThis._iAreaIdx++;
 
             _callOnCreated();
+        }
+
+        function _setGuideLine(e) {
+            if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 || oThis.keyCode.indexOf(KEYCODE_ALT) === -1) {
+                oThis.guideLine = null;
+            } else {
+                var oTarget = _getMousePosition(e);
+
+                oThis.guideLine = {
+                    x: oTarget.x,
+                    y: oTarget.y
+                }
+            }
+
+            oThis.draw();
         }
 
         this._stopDrag = function () {
@@ -481,13 +542,6 @@ var Module = {};
             var iLength = oThis._aAreas[aSelectedPoint[0]].locations.length;
 
             if (oThis.keyCode.indexOf(KEYCODE_ALT) !== -1 && oThis.keyCode.indexOf(KEYCODE_CTRL) === -1 && checkSquare(oThis._aAreas[aSelectedPoint[0]].locations) === true) {
-                $(oThis.canvas).css('cursor', 'crosshair');
-
-                oThis.guideLine = {
-                    x: oTarget.x,
-                    y: oTarget.y
-                };
-
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].x = oTarget.x;
                 oThis._aAreas[aSelectedPoint[0]].locations[aSelectedPoint[1]].y = oTarget.y;
                 switch (aSelectedPoint[1]) {
@@ -639,6 +693,12 @@ var Module = {};
 
             // 영역 분리 중이면 저장하고 리턴
             if (oThis.status === 'separating') {
+                // 중복 좌표 방지
+                for (var iIdx in oThis._separatingPosition) {
+                    if (oThis._separatingPosition[iIdx].x === oTarget.x && oThis._separatingPosition[iIdx].y === oTarget.y) {
+                        return false;
+                    }
+                }
                 oThis._separatingPosition.push(oTarget);
                 oThis.draw();
                 return false;
@@ -685,7 +745,7 @@ var Module = {};
 
                                 if (gapX <= options.allowGapSize && gapY <= options.allowGapSize) {
                                     if (findFlag === false && (key !== 0 || oThis.status === 'ready')) {
-                                        canvas.addEventListener('mousemove', _movePoint);
+                                        canvas.addEventListener('mousemove', _movePoint, false);
                                         oThis._aSelectedPosition = [iAreaIdx, iLocationIdx, key];
 
                                         findFlag = true;
@@ -707,6 +767,7 @@ var Module = {};
                                 if (findFlag === false && (key !== 0 || oThis.status === 'ready')) {
                                     if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 && oThis.keyCode.indexOf(KEYCODE_ALT) !== -1) {
                                         oThis.status = 'separating';
+                                        oThis.guideLine = null;
                                         oThis._separatingPosition = [
                                             {
                                                 x: value.x,
@@ -717,7 +778,7 @@ var Module = {};
 
                                         oThis.draw();
                                     } else {
-                                        canvas.addEventListener('mousemove', _movePoint);
+                                        canvas.addEventListener('mousemove', _movePoint, false);
                                     }
                                     oThis._aSelectedPosition = [iAreaIdx, key];
 
@@ -778,7 +839,7 @@ var Module = {};
 
                         _callOnSelected()
                         if (oThis.options.allowEdit === true) {
-                            canvas.addEventListener('mousemove', _moveRegion);
+                            canvas.addEventListener('mousemove', _moveRegion, false);
                         }
                         oThis.draw();
 
@@ -801,15 +862,15 @@ var Module = {};
 
                     // 사각형을 만든다.
                     oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x, y: oTarget.y});
-                    oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x, y: oTarget.y + 10});
-                    oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x + 10, y: oTarget.y + 10});
-                    oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x + 10, y: oTarget.y});
+                    oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x, y: oTarget.y - 10});
+                    oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x - 10, y: oTarget.y - 10});
+                    oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x - 10, y: oTarget.y});
                     oThis._aAreas[oThis._iAreaIdx].locations.push({x: oTarget.x, y: oTarget.y});
 
                     oThis._aSelectedPosition = [oThis._iAreaIdx, 2];
                     oThis._aActiveBlock = [oThis._iAreaIdx];
                     oThis._iAreaIdx++;
-                    canvas.addEventListener('mousemove', _movePoint);
+                    canvas.addEventListener('mousemove', _movePoint, false);
 
                     oThis.draw();
 
@@ -847,7 +908,7 @@ var Module = {};
             oThis._aAreas[oThis._iAreaIdx].locations.push(oTarget);
 
             oThis._aSelectedPosition = [oThis._iAreaIdx, oThis._aAreas[oThis._iAreaIdx].getLength() - 1];
-            canvas.addEventListener('mousemove', _movePoint);
+            canvas.addEventListener('mousemove', _movePoint, false);
 
             oThis.draw();
 
@@ -1051,18 +1112,18 @@ var Module = {};
         };
 
         if (this.options.allowEdit === true) {
-            oThis.canvas.addEventListener('mousedown', this._mouseDown);
-            oThis.canvas.addEventListener('contextmenu', this._rightDown);
-            oThis.canvas.addEventListener('mouseup', this._stopDrag);
-            window.addEventListener('keydown', this._setKeyDown);
-            window.addEventListener('keyup', this._unsetKeyDown);
+            oThis.canvas.addEventListener('mousedown', this._mouseDown, false);
+            oThis.canvas.addEventListener('contextmenu', this._rightDown, false);
+            oThis.canvas.addEventListener('mouseup', this._stopDrag, false);
+            window.addEventListener('keydown', this._setKeyDown, true);
+            window.addEventListener('keyup', this._unsetKeyDown, true);
         }
 
         if (this.options.allowEdit === false && this.options.allowSelect === true) {
-            oThis.canvas.addEventListener('mousedown', this._mouseDown);
-            oThis.canvas.addEventListener('mouseup', this._stopDrag);
-            window.addEventListener('keydown', this._setKeyDown);
-            window.addEventListener('keyup', this._unsetKeyDown);
+            oThis.canvas.addEventListener('mousedown', this._mouseDown, false);
+            oThis.canvas.addEventListener('mouseup', this._stopDrag, false);
+            window.addEventListener('keydown', this._setKeyDown, true);
+            window.addEventListener('keyup', this._unsetKeyDown, true);
         }
 
         if ($('.zoom-area').length === 0) {
@@ -1208,7 +1269,7 @@ var Module = {};
                 ctx.stroke();
             }
 
-            if (oThis.guideLine !== null) {
+            if (oThis.guideLine !== null && oThis.keyCode.indexOf(KEYCODE_ALT) !== -1) {
                 ctx.beginPath();
                 ctx.setLineDash([]);
                 ctx.strokeStyle = '#000000';
@@ -1220,6 +1281,8 @@ var Module = {};
                 ctx.lineTo(oThis.canvas.width, oThis.guideLine.y);
 
                 ctx.stroke();
+            } else {
+                oThis.guideLine = null;
             }
 
             ctx.drawImage(oThis.oImage, 0, 0);
@@ -1257,6 +1320,7 @@ var Module = {};
                     iMinX = aTargetPoints[iIdx].x;
                 }
             }
+            var iBlockWidth = iMaxX - iMinX;
 
             var aMaxY = [];
             var aMinY = [];
@@ -1313,7 +1377,7 @@ var Module = {};
             }
 
             /* 텍스트 쓰기 */
-            if (oBlock.label !== '' && oBlock.label !== null) {
+            if (oBlock.label.length > 0 && oBlock.label !== null) {
                 var iLeftMinY = ctx.canvas.height;
                 for (iIdx = 0; iIdx < aMinY.length; iIdx++) {
                     if (aTargetPoints[aMinY[iIdx]].y < iLeftMinY) {
@@ -1325,8 +1389,21 @@ var Module = {};
                 iLeft = aTargetPoints[iFindIdx].x + 4;
                 iTop = aTargetPoints[iFindIdx].y - 10;
 
+                var label = oBlock.label.join(', ');
+                if (ctx.measureText('...').width > iBlockWidth + 30) {
+                    label = '...';
+                } else if (ctx.measureText(label).width > iBlockWidth + 30) {
+                    while (true) {
+                        label = label.substring(0, label.length - 1);
+                        if (ctx.measureText(label + '...').width < iBlockWidth + 30) {
+                            break;
+                        }
+                    }
+                    label = label + '...';
+                }
+
                 ctx.fillStyle = rgba(oBlock.color);
-                ctx.fillText(oBlock.label, iLeft, iTop);
+                ctx.fillText(label, iLeft, iTop);
             }
         }
     }
@@ -1349,11 +1426,34 @@ var Module = {};
     }
 
     $.canvasAreasDraw.prototype.setLabel = function (options) {
-        if (isObject(this._aAreas[options.id]) === false) {
-            return false;
+        for (var iIdx = 0; iIdx < this._aAreas.length; iIdx++) {
+            if (isObject(this._aAreas[iIdx]) === false) {
+                continue;
+            }
+
+            if (this._aAreas[iIdx].id.toString() === options.id.toString()) {
+                this._aAreas[iIdx].setLabel(options.label);
+                break;
+            }
         }
 
-        this._aAreas[options.id].setLabel(options.label);
+        this.draw();
+
+        return true;
+    }
+
+    $.canvasAreasDraw.prototype.removeLabel = function (options) {
+        for (var iIdx = 0; iIdx < this._aAreas.length; iIdx++) {
+            if (isObject(this._aAreas[iIdx]) === false) {
+                continue;
+            }
+
+            if (this._aAreas[iIdx].id.toString() === options.id.toString()) {
+                this._aAreas[iIdx].removeLabel(options.label);
+                break;
+            }
+        }
+
         this.draw();
 
         return true;
@@ -1572,11 +1672,11 @@ var Module = {};
             iMinY = 0;
         }
 
-        if (iMaxX < oThis.canvas.width) {
+        if (iMaxX > oThis.canvas.width) {
             iMaxX = oThis.canvas.width;
         }
 
-        if (iMaxY < oThis.canvas.height) {
+        if (iMaxY > oThis.canvas.height) {
             iMaxY = oThis.canvas.height;
         }
 
@@ -1600,7 +1700,7 @@ var Module = {};
 
         // src = cv.imread('canvasOutput');
         // cv.cvtColor(src, src, cv.COLOR_RGBA2RGB, 0);
-        cv.grabCut(src, mask, rect, bgdModel, fgdModel, 5, cv.GC_INIT_WITH_RECT);
+        cv.grabCut(src, mask, rect, bgdModel, fgdModel, 1, cv.GC_INIT_WITH_RECT);
 
         var wandMask = {
             'bounds': {
@@ -1638,14 +1738,25 @@ var Module = {};
 
         //cv.imshow('canvasOutput', src);
 
-        src.delete(); mask.delete(); bgdModel.delete(); fgdModel.delete();
+        src.delete();
+        mask.delete();
+        bgdModel.delete();
+        fgdModel.delete();
 
         var result = [];
+        var iMaxPointLength = 0;
+        var iIdx = null;
         for (let i = 0; i < cs.length; i++) {
             if (cs[i].inner === true) continue;
-            if (cs[i].points.length <= 10) continue;
 
-            var ps = cs[i].points;
+            if (cs[i].points.length > iMaxPointLength) {
+                iMaxPointLength = cs[i].points.length;
+                iIdx = i;
+            }
+        }
+
+        if (iIdx !== null) {
+            var ps = cs[iIdx].points;
 
             for (let j = 0; j < ps.length; j++) {
                 result.push({
@@ -1653,24 +1764,29 @@ var Module = {};
                     y: ps[j].y
                 });
             }
-            break;
+
+            console.log(result);
+            if (result.length > 0) {
+                result.push({
+                    x: result[0].x,
+                    y: result[0].y,
+                });
+
+                oThis._aAreas[oThis._aActiveBlock[0]].locations = result;
+                oThis.draw();
+            } else {
+                alert('추출할 대상이 없습니다.');
+            }
+        } else {
+            alert('추출할 대상이 없습니다.');
         }
 
-        console.log(result);
-        if (result.length > 0) {
-            result.push({
-                x: result[0].x,
-                y: result[0].y,
-            });
-
-            oThis._aAreas[oThis._aActiveBlock[0]].locations = result;
-            oThis.draw();
-        }
 
         // 이미지 디버깅용
         //$('#canvasOutput').css('display', 'block').css('width', img.width).css('height', img.height);
 
         //var output = document.getElementById('canvasOutput');
+        //$('.spinner').remove();
         document.body.removeChild(document.getElementById('grabcut-target'));
     }
 

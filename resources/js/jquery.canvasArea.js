@@ -196,8 +196,7 @@ var Module = {};
             }
 
             oNewArea.isActive = bFocus;
-            oThis._aSelectedPosition = [oThis._iAreaIdx];
-            console.log(oThis._aSelectedPosition);
+            oThis._aActiveBlock = [oThis._iAreaIdx];
 
             oThis._aAreas.push(oNewArea);
 
@@ -1645,7 +1644,6 @@ var Module = {};
         this._aAreas.forEach(function (value, index, array) {
             var locations = [];
 
-            console.log(getArrayDepth(value.locations));
             if (getArrayDepth(value.locations) === 2) {
                 for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
                     var subLocation = [];

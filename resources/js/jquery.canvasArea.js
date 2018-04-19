@@ -90,6 +90,7 @@ var Module = {};
         this.guideLine = null;
 
         this.mouseClickFlag = false;
+        this.keyDownFlag = false;
 
         // 캔버스
         this.canvas = $(oObj)[0];
@@ -344,9 +345,17 @@ var Module = {};
                         }
                     }
                 } */
+                if (oThis.keyDownFlag === true) {
+                    return false;
+                }
                 grabcut(oThis);
+                oThis.keyDownFlag = true;
             } else if (oThis.keyCode.indexOf(KEYCODE_PRINT) !== -1) {
+                if (oThis.keyDownFlag === true) {
+                    return false;
+                }
                 console.log(oThis._aAreas);
+                oThis.keyDownFlag = true;
             }
 
             //console.log(oThis.keyCode);
@@ -411,6 +420,8 @@ var Module = {};
                 oThis._separatingPosition = [];
                 oThis._aSelectedPosition = [];
             }
+
+            oThis.keyDownFlag = false;
 
             oThis.draw();
         }
@@ -951,6 +962,10 @@ var Module = {};
                 return false;
             }
 
+            if (oThis.mouseClickFlag === true) {
+                return;
+            }
+
             if (oThis.status === 'ready') {
                 for (; isObject(oThis._aAreas[oThis._iAreaIdx]) === true; oThis._iAreaIdx++) { }
                 oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(oThis._iAreaIdx);
@@ -1005,6 +1020,7 @@ var Module = {};
             oThis.status = 'drawing';
             oThis._aAreas[oThis._iAreaIdx].isActive = true;
             oThis._aAreas[oThis._iAreaIdx].locations.push(oTarget);
+            oThis.mouseClickFlag = true;
 
             oThis._aSelectedPosition = [oThis._iAreaIdx, oThis._aAreas[oThis._iAreaIdx].getLength() - 1];
             canvas.addEventListener('mousemove', _movePoint, false);

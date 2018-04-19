@@ -56,6 +56,7 @@ var Module = {};
     const KEYCODE_CANCEL = 27;
     const KEYCODE_TAB = 9;
 
+    const KEYCODE_C = 67;
     const KEYCODE_G = 71;
 
     $.canvasAreasDraw.prototype.init = function (oObj, oCustomOptions) {
@@ -353,6 +354,18 @@ var Module = {};
                     }
                 }
                 oThis.keyDownFlag = true;
+            } else if (oThis.keyCode.indexOf(KEYCODE_C) !== -1) {
+                if (oThis.keyDownFlag === true) {
+                    return;
+                }
+                oThis.keyDownFlag = true;
+                var sColor = getRandomColor();
+
+                for (var iIdx in oThis._aActiveBlock) {
+                    oThis._aAreas[oThis._aActiveBlock[iIdx]].color = sColor;
+                }
+
+                oThis.draw();
             } else if (oThis.keyCode.indexOf(KEYCODE_G) !== -1) {
                 /* if ($('.spinner').length === 0) {
                     var marginTop = oThis.canvas.height / 2 + 10;
@@ -1927,7 +1940,6 @@ var Module = {};
                 });
             }
 
-            console.log(result);
             if (result.length > 0) {
                 result.push({
                     x: result[0].x,

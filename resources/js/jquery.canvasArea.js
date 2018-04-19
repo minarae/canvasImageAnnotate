@@ -113,71 +113,102 @@ var Module = {};
                 oThis.canvas.height = oThis.oImage.height;
 
                 oThis.options.areas.forEach(function (value, index, array) {
-                    var oArea = new AreaStruct(value.id);
-                    if (value.color) {
-                        oArea.setColor(value.color);
-                    } else {
-                        oArea.setColor(oThis.options.defaultColor);
-                    }
-
-                    if (value.label) {
-                        oArea.setLabel(value.label);
-                    }
-                    if (getArrayDepth(value.locations) === 3) {
-                        for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
-                            var subLocations = [];
-                            if (value.locations[iIdx].length <= 3) {
-                                continue;
-                            }
-                            for (var iIdx2 in value.locations[iIdx]) {
-                                subLocations.push({
-                                    x: value.locations[iIdx][iIdx2][0],
-                                    y: value.locations[iIdx][iIdx2][1],
-                                });
-                            }
-                            /* value.locations[iIdx].forEach(function (value2) {
-                                subLocations.push({
-                                    x: value2[0],
-                                    y: value2[1]
-                                });
-                            }); */
-                            subLocations.push({
-                                x: subLocations[0].x,
-                                y: subLocations[0].y
-                            });
-
-                            oArea.locations.push(subLocations);
-                        }
-                        if (oArea.locations.length === 0) {
-                            return true;
-                        }
-                    } else {
-                        if (value.locations.length <= 3) {
-                            return true;
-                        }
-                        for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
-                            oArea.locations.push({
-                                x: value.locations[iIdx][0],
-                                y: value.locations[iIdx][1],
-                            });
-                        }
-                        oArea.locations.push({
-                            x: value.locations[0][0],
-                            y: value.locations[0][1],
-                        });
-                    }
-                    oArea.isActive = false;
-
-                    oThis._aAreas.push(oArea);
-
-                    if (oThis._iAreaIdx < value.id) {
-                        oThis._iAreaIdx = value.id;
-                    }
-                    oThis._iAreaIdx++;
+                    oThis._addAreaInfo(value);
                 });
 
                 oThis.draw();
             }
+        }
+
+        this._addAreaInfo = function (oArea) {
+            if (oThis.status === 'drawing') {
+                oThis._aAreas.splice(oThis._iAreaIdx, 1);
+            }
+
+            oThis.status = 'ready';
+
+            // 나누기 종료
+            oThis._separatingPosition = [];
+            oThis._aSelectedPosition = [];
+
+            var sId = oArea.id;
+            var bFocus = false;
+            if (sId === null || sId === undefined) {
+                sId = oThis._iAreaIdx;
+                bFocus = true;
+            }
+
+            var oNewArea = new AreaStruct(sId);
+            if (oArea.color) {
+                oNewArea.setColor(oArea.color);
+            } else {
+                oNewArea.setColor(oThis.options.defaultColor);
+            }
+
+            if (oArea.label) {
+                oNewArea.setLabel(oArea.label);
+            }
+            if (getArrayDepth(oArea.locations) === 3) {
+                for (var iIdx = 0; iIdx < oArea.locations.length; iIdx++) {
+                    var subLocations = [];
+                    if (oArea.locations[iIdx].length <= 3) {
+                        continue;
+                    }
+                    for (var iIdx2 in oArea.locations[iIdx]) {
+                        subLocations.push({
+                            x: oArea.locations[iIdx][iIdx2][0],
+                            y: oArea.locations[iIdx][iIdx2][1],
+                        });
+                    }
+
+                    subLocations.push({
+                        x: subLocations[0].x,
+                        y: subLocations[0].y
+                    });
+
+                    oNewArea.locations.push(subLocations);
+                }
+                if (oNewArea.locations.length === 0) {
+                    return;
+                }
+            } else {
+                if (oArea.locations.length <= 3) {
+                    return;
+                }
+                for (var iIdx = 0; iIdx < oArea.locations.length; iIdx++) {
+                    oNewArea.locations.push({
+                        x: oArea.locations[iIdx][0],
+                        y: oArea.locations[iIdx][1],
+                    });
+                }
+                oNewArea.locations.push({
+                    x: oArea.locations[0][0],
+                    y: oArea.locations[0][1],
+                });
+            }
+
+            if (bFocus === true) {
+                for (var iIdx in oThis._aAreas) {
+                    oThis._aAreas[iIdx].isActive = false;
+                }
+            }
+
+            oNewArea.isActive = bFocus;
+            oThis._aSelectedPosition = [oThis._iAreaIdx];
+            console.log(oThis._aSelectedPosition);
+
+            oThis._aAreas.push(oNewArea);
+
+            if (oThis._iAreaIdx < oArea.id) {
+                oThis._iAreaIdx = oArea.id;
+            }
+            oThis._iAreaIdx++;
+
+            if (bFocus === true) {
+                oThis.draw();
+            }
+
+            return sId;
         }
 
         this._setKeyDown = function (e) {
@@ -1519,6 +1550,14 @@ var Module = {};
         this.draw();
 
         return true;
+    }
+
+    $.canvasAreasDraw.prototype.addArea = function (option) {
+        if (option.id !== undefined && option.id !== null) {
+            option.id = null;
+        }
+
+        return this._addAreaInfo(option);
     }
 
     $.canvasAreasDraw.prototype.removeLabel = function (options) {

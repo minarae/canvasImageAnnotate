@@ -20,6 +20,7 @@
         <button type="button" id="focus">focus</button>
         <button type="button" id="chgColor">change color</button>
         <button type="button" id="setLabel">set Label</button>
+        <button type="button" id="addArea">add Area</button>
         <button type="button" id="getResult">get Result</button>
         <button type="button" id="reset">reset</button>
     </div>
@@ -73,6 +74,21 @@
                 id: $('#id').val(),
                 label: 'test Label'
             });
+        });
+
+        $('#addArea').click(function () {
+            var result = $('#viewport').canvasAreas('addArea', {
+                color: '#999999',
+                label: 'test Label',
+                locations: [
+                    [100, 100],
+                    [100, 200],
+                    [200, 200],
+                    [200, 100]
+                ]
+            });
+
+            console.log(result);
         });
 
         $('#focus').click(function () {

@@ -1319,8 +1319,8 @@ var Module = {};
                     for (var i = 0; i < iLength; i++) {
                         if (oCurBlocks.isActive === true) {
                             ctx.setLineDash([]);
-                            ctx.fillRect(aLocations[i].x - 2, aLocations[i].y - 2, 4, 4);
-                            ctx.strokeRect(aLocations[i].x - 2, aLocations[i].y - 2, 4, 4);
+                            ctx.fillRect(aLocations[i].x - 1, aLocations[i].y - 1, 3, 3);
+                            ctx.strokeRect(aLocations[i].x - 1, aLocations[i].y - 1, 3, 3);
                         }
 
                         if (i > 0) {
@@ -1355,8 +1355,8 @@ var Module = {};
 
                 for (var iIdx = 0; iIdx < aSeparating.length; iIdx++) {
                     ctx.setLineDash([]);
-                    ctx.fillRect(aSeparating[iIdx].x - 2, aSeparating[iIdx].y - 2, 4, 4);
-                    ctx.strokeRect(aSeparating[iIdx].x - 2, aSeparating[iIdx].y - 2, 4, 4);
+                    ctx.fillRect(aSeparating[iIdx].x - 1, aSeparating[iIdx].y - 1, 3, 3);
+                    ctx.strokeRect(aSeparating[iIdx].x - 1, aSeparating[iIdx].y - 1, 3, 3);
 
                     ctx.lineTo(aSeparating[iIdx].x, aSeparating[iIdx].y);
 

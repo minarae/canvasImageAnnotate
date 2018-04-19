@@ -89,6 +89,8 @@ var Module = {};
 
         this.guideLine = null;
 
+        this.mouseClickFlag = false;
+
         // 캔버스
         this.canvas = $(oObj)[0];
         //this.ctx = this.canvas.getContext('2d');
@@ -111,9 +113,6 @@ var Module = {};
                 oThis.canvas.height = oThis.oImage.height;
 
                 oThis.options.areas.forEach(function (value, index, array) {
-                    if (value.locations.length <= 3) {
-                        return true;
-                    }
                     var oArea = new AreaStruct(value.id);
                     if (value.color) {
                         oArea.setColor(value.color);
@@ -124,24 +123,38 @@ var Module = {};
                     if (value.label) {
                         oArea.setLabel(value.label);
                     }
-
                     if (getArrayDepth(value.locations) === 3) {
                         for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
                             var subLocations = [];
-                            value.locations[iIdx].forEach(function (value2) {
+                            if (value.locations[iIdx].length <= 3) {
+                                continue;
+                            }
+                            for (var iIdx2 in value.locations[iIdx]) {
+                                subLocations.push({
+                                    x: value.locations[iIdx][iIdx2][0],
+                                    y: value.locations[iIdx][iIdx2][1],
+                                });
+                            }
+                            /* value.locations[iIdx].forEach(function (value2) {
                                 subLocations.push({
                                     x: value2[0],
                                     y: value2[1]
                                 });
-                            });
+                            }); */
                             subLocations.push({
-                                x: value.locations[iIdx][0][0],
-                                y: value.locations[iIdx][0][1]
+                                x: subLocations[0].x,
+                                y: subLocations[0].y
                             });
 
                             oArea.locations.push(subLocations);
                         }
+                        if (oArea.locations.length === 0) {
+                            return true;
+                        }
                     } else {
+                        if (value.locations.length <= 3) {
+                            return true;
+                        }
                         for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
                             oArea.locations.push({
                                 x: value.locations[iIdx][0],
@@ -172,7 +185,7 @@ var Module = {};
 
             if (oThis.keyCode.indexOf(keyCode) < 0) {
                 oThis.keyCode.push(keyCode);
-                oThis.keyCode.sort();
+                oThis.keyCode.sort(compare);
             }
 
             if (oThis.keyCode.indexOf(KEYCODE_CANCEL) !== -1) {
@@ -216,7 +229,7 @@ var Module = {};
                 if (oThis._aActiveBlock.length >= 2) {
                     var aLocations = [];
 
-                    oThis._aActiveBlock.sort();
+                    oThis._aActiveBlock.sort(compare);
 
                     for (var iActiveIdx = oThis._aActiveBlock.length - 1; iActiveIdx >= 0; iActiveIdx--) {
                         if (isObject(oThis._aAreas[oThis._aActiveBlock[iActiveIdx]]) === false) {
@@ -236,6 +249,7 @@ var Module = {};
                         }
                     }
 
+                    console.log(oThis._aActiveBlock);
                     oThis._aAreas[oThis._aActiveBlock[0]].locations = aLocations;
 
                     oThis._aActiveBlock = [oThis._aActiveBlock[0]];
@@ -312,7 +326,7 @@ var Module = {};
 
             if (iIdx >= 0) {
                 oThis.keyCode.splice(iIdx, 1);
-                oThis.keyCode.sort();
+                oThis.keyCode.sort(compare);
             }
 
             if (e.keyCode === KEYCODE_SHIFT && oThis.options.allowZoom === true) {
@@ -459,6 +473,8 @@ var Module = {};
             oThis.canvas.removeEventListener('mousemove', _movePoint);
             oThis.canvas.removeEventListener('mousemove', _moveRegion);
 
+            oThis.mouseClickFlag = false;
+
             oThis.aSelectedPoint = [];
             oThis.oOriginPosition = null;
 
@@ -482,37 +498,78 @@ var Module = {};
                 if (isObject(oThis._aAreas[iIdx]) === false) {
                     continue;
                 }
-                var iLength = oThis._aAreas[iIdx].getLength();
 
-                for (var iIdx2 = 0; iIdx2 < iLength; iIdx2++) {
-                    var flagX = Math.abs(oTarget.x - oThis._aAreas[iIdx].locations[iIdx2].x);
-                    var flagY = Math.abs(oTarget.y - oThis._aAreas[iIdx].locations[iIdx2].y);
+                if (getArrayDepth(oThis._aAreas[iIdx].locations) === 2) {
+                    for (var iIdx2 in oThis._aAreas[iIdx].locations) {
+                        for(var iIdx3 in oThis._aAreas[iIdx].locations[iIdx2]) {
+                            var flagX = Math.abs(oTarget.x - oThis._aAreas[iIdx].locations[iIdx2][iIdx3].x);
+                            var flagY = Math.abs(oTarget.y - oThis._aAreas[iIdx].locations[iIdx2][iIdx3].y);
 
-                    if (flagX <= options.allowGapSize && flagY <= options.allowGapSize) {
-                        var iEndIdx = oThis._aAreas[iIdx].getLength() - 1;
-                        var oCurPoint = oThis._aAreas[iIdx].locations[iIdx2];
-                        var oEndPoint = oThis._aAreas[iIdx].locations[iEndIdx];
+                            if (flagX <= options.allowGapSize && flagY <= options.allowGapSize) {
+                                var iEndIdx = oThis._aAreas[iIdx].locations[iIdx2].length - 1;
+                                var oCurPoint = oThis._aAreas[iIdx].locations[iIdx2][iIdx3];
+                                var oEndPoint = oThis._aAreas[iIdx].locations[iIdx2][iEndIdx];
 
-                        if (iIdx2 === 0 && iEndIdx !== iIdx2 && oCurPoint.x === oEndPoint.x && oCurPoint.y === oEndPoint.y) {
-                            if (iEndIdx === 1) {
-                                oThis._aAreas[iIdx].locations.splice(1, 1);
-                            } else {
-                                oThis._aAreas[iIdx].locations[iEndIdx].x = oThis._aAreas[iIdx].locations[iIdx2 + 1].x;
-                                oThis._aAreas[iIdx].locations[iEndIdx].y = oThis._aAreas[iIdx].locations[iIdx2 + 1].y;
+                                if (parseInt(iIdx3) === 0 && iEndIdx !== iIdx3 && oCurPoint.x === oEndPoint.x && oCurPoint.y === oEndPoint.y) {
+                                    if (iEndIdx === 1) {
+                                        oThis._aAreas[iIdx].locations.splice(1, 1);
+                                    } else {
+                                        iIdx3 = parseInt(iIdx3);
+                                        oThis._aAreas[iIdx].locations[iIdx2][iEndIdx].x = oThis._aAreas[iIdx].locations[iIdx2][iIdx3 + 1].x;
+                                        oThis._aAreas[iIdx].locations[iIdx2][iEndIdx].y = oThis._aAreas[iIdx].locations[iIdx2][iIdx3 + 1].y;
+                                    }
+                                }
+                                if (oThis._aAreas[iIdx].locations[iIdx2] !== undefined) {
+                                    oThis._aAreas[iIdx].locations[iIdx2].splice(iIdx3, 1);
+
+                                    if (oThis._aAreas[iIdx].locations[iIdx2].length === 0) {
+                                        oThis._aAreas[iIdx].locations.splice(iIdx2, 1);
+                                        oThis._aAreas[iIdx].locations.sort(compare);
+                                    }
+                                }
+
+                                if (oThis._aAreas[iIdx].locations.length === 1) {
+                                    oThis._aAreas[iIdx].locations = oThis._aAreas[iIdx].locations[0]
+                                }
+
+                                oThis.draw();
+                                return false;
                             }
                         }
-                        oThis._aAreas[iIdx].locations.splice(iIdx2, 1);
+                    }
+                } else {
+                    var iLength = oThis._aAreas[iIdx].getLength();
 
-                        if (oThis._aAreas[iIdx].getLength() === 0) {
-                            oThis._aAreas.splice(iIdx, 1);
-                            $('#trash-' + iIdx).remove();
+                    for (var iIdx2 = 0; iIdx2 < iLength; iIdx2++) {
+                        var flagX = Math.abs(oTarget.x - oThis._aAreas[iIdx].locations[iIdx2].x);
+                        var flagY = Math.abs(oTarget.y - oThis._aAreas[iIdx].locations[iIdx2].y);
 
-                            if (iIdx === oThis._iAreaIdx) {
-                                oThis.status = 'ready';
+                        if (flagX <= options.allowGapSize && flagY <= options.allowGapSize) {
+                            var iEndIdx = oThis._aAreas[iIdx].getLength() - 1;
+                            var oCurPoint = oThis._aAreas[iIdx].locations[iIdx2];
+                            var oEndPoint = oThis._aAreas[iIdx].locations[iEndIdx];
+
+                            if (iIdx2 === 0 && iEndIdx !== iIdx2 && oCurPoint.x === oEndPoint.x && oCurPoint.y === oEndPoint.y) {
+                                if (iEndIdx === 1) {
+                                    oThis._aAreas[iIdx].locations.splice(1, 1);
+                                } else {
+                                    oThis._aAreas[iIdx].locations[iEndIdx].x = oThis._aAreas[iIdx].locations[iIdx2 + 1].x;
+                                    oThis._aAreas[iIdx].locations[iEndIdx].y = oThis._aAreas[iIdx].locations[iIdx2 + 1].y;
+                                }
                             }
+                            oThis._aAreas[iIdx].locations.splice(iIdx2, 1);
+
+                            if (oThis._aAreas[iIdx].getLength() === 0) {
+                                oThis._aAreas.splice(iIdx, 1);
+                                $('#trash-' + iIdx).remove();
+
+                                if (iIdx === oThis._iAreaIdx) {
+                                    oThis.status = 'ready';
+                                }
+                            }
+                            oThis.draw();
+                            return false;
                         }
-                        oThis.draw();
-                        return false;
                     }
                 }
             }
@@ -653,6 +710,9 @@ var Module = {};
         }
 
         function _multiSelect(e) {
+            if (oThis.mouseClickFlag === true) {
+                return;
+            }
             var oTarget = _getMousePosition(e);
 
             for (var iIdx = 0; iIdx <= oThis._iAreaIdx; iIdx++) {
@@ -661,12 +721,20 @@ var Module = {};
                 }
 
                 if (_checkInside(oTarget, oThis._aAreas[iIdx]) === true) {
-                    oThis._aAreas[iIdx].isActive = !oThis._aAreas[iIdx].isActive;
-                    oThis._aActiveBlock.push(iIdx);
+                    if (oThis._aAreas[iIdx].isActive === true) {
+                        oThis._aAreas[iIdx].isActive = false;
+                        var iKey = oThis._aActiveBlock.indexOf(iIdx);
+                        oThis._aActiveBlock.splice(iKey, 1);
+                    } else {
+                        oThis._aAreas[iIdx].isActive = true;
+                        oThis._aActiveBlock.push(iIdx);
+                    }
+
                     break;
                 }
             }
             console.log(oThis._aActiveBlock);
+            oThis.mouseClickFlag = true;
             _callOnSelected();
 
             oThis.draw();
@@ -1357,15 +1425,26 @@ var Module = {};
                         var aElementId = $(this).attr('id').split('-');
 
                         _callOnDeleted(aElementId[1]);
+                        var iKey = null;
                         for (var iIdx = 0; iIdx < aAreas.length; iIdx++) {
                             if (isObject(aAreas[iIdx]) === false) {
                                 continue;
                             }
                             if (aAreas[iIdx].id.toString() === aElementId[1].toString()) {
+                                iKey = iIdx;
                                 aAreas.splice(iIdx, 1);
                                 break;
                             }
                         }
+
+                        if (iKey !== null) {
+                            var iElmt = oThis._aActiveBlock.indexOf(iKey);
+
+                            if (iElmt >= 0) {
+                                oThis._aActiveBlock.splice(iElmt, 1);
+                            }
+                        }
+
                         $(this).remove();
                         drawAction();
                     });
@@ -1483,15 +1562,17 @@ var Module = {};
         this._aAreas.forEach(function (value, index, array) {
             var locations = [];
 
+            console.log(getArrayDepth(value.locations));
             if (getArrayDepth(value.locations) === 2) {
-                var subLocation = [];
-
                 for (var iIdx = 0; iIdx < value.locations.length; iIdx++) {
+                    var subLocation = [];
+
                     value.locations[iIdx].forEach(function (position, idx, arr) {
                         subLocation.push([position.x, position.y]);
                     });
 
                     subLocation.pop();
+                    console.log(subLocation);
 
                     locations.push(subLocation);
                 }
@@ -1807,5 +1888,15 @@ var Module = {};
             color += letters[Math.floor(Math.random() * 16)];
         }
         return color;
+    }
+
+    var compare = function (a, b) {
+        if (a < b) {
+            return -1;
+        } else if(a > b) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 })(jQuery);

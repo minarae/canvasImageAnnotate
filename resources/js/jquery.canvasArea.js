@@ -54,6 +54,7 @@ var Module = {};
     const KEYCODE_SHIFT = 16;
     const KEYCODE_PRINT = 80;
     const KEYCODE_CANCEL = 27;
+    const KEYCODE_TAB = 9;
 
     const KEYCODE_G = 71;
 
@@ -326,6 +327,33 @@ var Module = {};
                 if ((oThis._aSelectedPosition.length > 0 && isObject(oThis._aAreas[oThis._aSelectedPosition[0]]) && checkSquare(oThis._aAreas[oThis._aSelectedPosition[0]].locations) === true) || oThis.status === 'ready') {
                     oThis.canvas.addEventListener('mousemove', _setGuideLine, false);
                 }
+            } else if (oThis.keyCode.indexOf(KEYCODE_TAB) !== -1) {
+                e.preventDefault();
+                if (oThis.keyDownFlag === true) {
+                    return false;
+                }
+                var iMaxIndex = Math.max.apply(null, oThis._aActiveBlock);
+                var aIndexArray = [];
+                for (var idx in oThis._aAreas) {
+                    aIndexArray.push(parseInt(idx));
+                }
+
+                var iKey = aIndexArray.indexOf(iMaxIndex);
+                if (iKey === aIndexArray.length - 1) {
+                    iKey = 0;
+                } else {
+                    iKey++;
+                }
+
+                for (var idx in aIndexArray) {
+                    if (iKey === parseInt(idx)) {
+                        oThis._aAreas[aIndexArray[idx]].isActive = true;
+                        oThis._aActiveBlock = [aIndexArray[idx]];
+                    } else {
+                        oThis._aAreas[aIndexArray[idx]].isActive = false;
+                    }
+                }
+                oThis.keyDownFlag = true;
             } else if (oThis.keyCode.indexOf(KEYCODE_G) !== -1) {
                 /* if ($('.spinner').length === 0) {
                     var marginTop = oThis.canvas.height / 2 + 10;

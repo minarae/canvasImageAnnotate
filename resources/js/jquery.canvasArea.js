@@ -197,17 +197,16 @@ var Module = {};
             }
 
             oNewArea.isActive = bFocus;
-            oThis._aActiveBlock = [oThis._iAreaIdx];
-
             oThis._aAreas.push(oNewArea);
 
-            if (oThis._iAreaIdx < oArea.id) {
-                oThis._iAreaIdx = oArea.id;
-            }
+            oThis._iAreaIdx = oThis._aAreas.length;
+            oThis._aActiveBlock = [oThis._iAreaIdx - 1];
+
             oThis._iAreaIdx++;
 
             if (bFocus === true) {
                 oThis.draw();
+                _callOnCreated();
             }
 
             return sId;
@@ -325,13 +324,14 @@ var Module = {};
                 oThis.zoomLayer.css('display', 'inline');
             } else if (oThis.keyCode.indexOf(KEYCODE_ALT) !== -1 && oThis.keyCode.indexOf(KEYCODE_CTRL) === -1) {
                 if ((oThis._aSelectedPosition.length > 0 && isObject(oThis._aAreas[oThis._aSelectedPosition[0]]) && checkSquare(oThis._aAreas[oThis._aSelectedPosition[0]].locations) === true) || oThis.status === 'ready') {
-                    oThis.canvas.addEventListener('mousemove', _setGuideLine, false);
+                    oThis.canvas.addEventListener('mousemove', _setGuideLine);
                 }
             } else if (oThis.keyCode.indexOf(KEYCODE_TAB) !== -1) {
                 e.preventDefault();
                 if (oThis.keyDownFlag === true) {
                     return false;
                 }
+                oThis.keyDownFlag = true;
                 var iMaxIndex = Math.max.apply(null, oThis._aActiveBlock);
                 var aIndexArray = [];
                 for (var idx in oThis._aAreas) {
@@ -353,7 +353,6 @@ var Module = {};
                         oThis._aAreas[aIndexArray[idx]].isActive = false;
                     }
                 }
-                oThis.keyDownFlag = true;
             } else if (oThis.keyCode.indexOf(KEYCODE_C) !== -1) {
                 if (oThis.keyDownFlag === true) {
                     return;
@@ -539,6 +538,7 @@ var Module = {};
         function _setGuideLine(e) {
             if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 || oThis.keyCode.indexOf(KEYCODE_ALT) === -1) {
                 oThis.guideLine = null;
+                oThis.canvas.addEventListener('mousemove', _setGuideLine);
             } else {
                 var oTarget = _getMousePosition(e);
 
@@ -1179,7 +1179,9 @@ var Module = {};
 
         function _callOnCreated() {
             if (oThis.options.onCreated !== null) {
-                oThis.options.onCreated.call(oThis, [oThis._aAreas[oThis._iAreaIdx - 1]]);
+                if (oThis._aActiveBlock.length > 0) {
+                    oThis.options.onCreated.call(oThis, [oThis._aAreas[oThis._aActiveBlock[0]]]);
+                }
             }
         }
 
@@ -1267,18 +1269,18 @@ var Module = {};
         };
 
         if (this.options.allowEdit === true) {
-            oThis.canvas.addEventListener('mousedown', this._mouseDown, false);
-            oThis.canvas.addEventListener('contextmenu', this._rightDown, false);
-            oThis.canvas.addEventListener('mouseup', this._stopDrag, false);
-            window.addEventListener('keydown', this._setKeyDown, true);
-            window.addEventListener('keyup', this._unsetKeyDown, true);
+            oThis.canvas.addEventListener('mousedown', this._mouseDown);
+            oThis.canvas.addEventListener('contextmenu', this._rightDown);
+            oThis.canvas.addEventListener('mouseup', this._stopDrag);
+            window.addEventListener('keydown', this._setKeyDown);
+            window.addEventListener('keyup', this._unsetKeyDown);
         }
 
         if (this.options.allowEdit === false && this.options.allowSelect === true) {
-            oThis.canvas.addEventListener('mousedown', this._mouseDown, false);
-            oThis.canvas.addEventListener('mouseup', this._stopDrag, false);
-            window.addEventListener('keydown', this._setKeyDown, true);
-            window.addEventListener('keyup', this._unsetKeyDown, true);
+            oThis.canvas.addEventListener('mousedown', this._mouseDown);
+            oThis.canvas.addEventListener('mouseup', this._stopDrag);
+            window.addEventListener('keydown', this._setKeyDown);
+            window.addEventListener('keyup', this._unsetKeyDown);
         }
 
         if ($('.zoom-area').length === 0) {
@@ -1293,10 +1295,10 @@ var Module = {};
     }
 
     $.canvasAreasDraw.prototype.draw = function () {
+        var oThis = this;
         var aAreas = this._aAreas;
         var aSeparating = this._separatingPosition;
         let ctx = this.canvas.getContext('2d');
-        var oThis = this;
         drawAction();
 
         var _callOnDeleted = oThis._callOnDeleted;

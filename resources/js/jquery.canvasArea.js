@@ -56,8 +56,14 @@ var Module = {};
     const KEYCODE_CANCEL = 27;
     const KEYCODE_TAB = 9;
 
+    const KEYCODE_ARROW_LEFT = 37;
+    const KEYCODE_ARROW_UP = 38;
+    const KEYCODE_ARROW_RIGHT = 39;
+    const KEYCODE_ARROW_DOWN = 40;
+
     const KEYCODE_C = 67;
     const KEYCODE_G = 71;
+    const KEYCODE_Z = 90;
 
     $.canvasAreasDraw.prototype.init = function (oObj, oCustomOptions) {
         var oThis = this;
@@ -109,6 +115,9 @@ var Module = {};
         // 키보드값 체크
         this.keyCode = [];
 
+        // undo용 array
+        this.undo = [];
+
         if ($(oObj).data('image-url') !== undefined) {
             this.oImage.src = $(oObj).attr('data-image-url');
             this.oImage.onload = function () {
@@ -137,7 +146,7 @@ var Module = {};
             var sId = oArea.id;
             var bFocus = false;
             if (sId === null || sId === undefined) {
-                sId = oThis._iAreaIdx;
+                sId = getAreaId();
                 bFocus = true;
             }
 
@@ -281,7 +290,6 @@ var Module = {};
                         }
                     }
 
-                    console.log(oThis._aActiveBlock);
                     oThis._aAreas[oThis._aActiveBlock[0]].locations = aLocations;
 
                     oThis._aActiveBlock = [oThis._aActiveBlock[0]];
@@ -326,6 +334,12 @@ var Module = {};
                 if ((oThis._aSelectedPosition.length > 0 && isObject(oThis._aAreas[oThis._aSelectedPosition[0]]) && checkSquare(oThis._aAreas[oThis._aSelectedPosition[0]].locations) === true) || oThis.status === 'ready') {
                     oThis.canvas.addEventListener('mousemove', _setGuideLine);
                 }
+            } else if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 && oThis.keyCode.indexOf(KEYCODE_Z) !== -1) {
+                if (oThis.keyDownFlag === true) {
+                    return false;
+                }
+                oThis.keyDownFlag = true;
+                console.log('undo');
             } else if (oThis.keyCode.indexOf(KEYCODE_TAB) !== -1) {
                 e.preventDefault();
                 if (oThis.keyDownFlag === true) {
@@ -394,10 +408,65 @@ var Module = {};
                     return false;
                 }
                 console.log(oThis._aAreas);
+                console.log(oThis._aActiveBlock);
+                console.log(oThis._iAreaIdx);
                 oThis.keyDownFlag = true;
             }
 
+            if (moveAreaByArrowKey() === true) {
+                e.preventDefault();
+            }
+
             //console.log(oThis.keyCode);
+        }
+
+        function moveAreaByArrowKey() {
+            var moveX = 0;
+            var moveY = 0;
+            if (oThis.keyCode.indexOf(KEYCODE_ARROW_LEFT) !== -1) {
+                moveX = -1;
+            }
+
+            if (oThis.keyCode.indexOf(KEYCODE_ARROW_RIGHT) !== -1) {
+                moveX = 1;
+            }
+
+            if (oThis.keyCode.indexOf(KEYCODE_ARROW_UP) !== -1) {
+                moveY = -1;
+            }
+
+            if (oThis.keyCode.indexOf(KEYCODE_ARROW_DOWN) !== -1) {
+                moveY = 1;
+            }
+
+            if (moveX === 0 && moveY === 0) {
+                return false;
+            }
+
+            for (var iIdx in oThis._aActiveBlock) {
+                var iActive = parseInt(oThis._aActiveBlock[iIdx]);
+
+                if (getArrayDepth(oThis._aAreas[iActive].locations) === 2) {
+                    for (var iLocationIdx = 0; iLocationIdx < oThis._aAreas[iActive].locations.length; iLocationIdx++) {
+                        var iLength = oThis._aAreas[iActive].locations[iLocationIdx].length;
+
+                        for (var iLocation = 0; iLocation < iLength; iLocation++) {
+                            oThis._aAreas[iActive].locations[iLocationIdx][iLocation].x += moveX;
+                            oThis._aAreas[iActive].locations[iLocationIdx][iLocation].y += moveY;
+                        }
+                    }
+                } else {
+                    var iLength = oThis._aAreas[iActive].locations.length;
+
+                    for (var iLocation = 0; iLocation < iLength; iLocation++) {
+                        oThis._aAreas[iActive].locations[iLocation].x += moveX;
+                        oThis._aAreas[iActive].locations[iLocation].y += moveY;
+                    }
+                }
+            }
+
+            oThis.draw();
+            return true;
         }
 
         this._unsetKeyDown = function (e) {
@@ -520,7 +589,7 @@ var Module = {};
             oThis._aAreas[oThis._aSelectedPosition[0]].locations = aFront;
 
             for (; isObject(oThis._aAreas[oThis._iAreaIdx]) === true; oThis._iAreaIdx++) { }
-            oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(oThis._iAreaIdx);
+            oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(getAreaId());
             //oThis._aAreas[oThis._iAreaIdx].setColor(oThis._aAreas[oThis._aSelectedPosition[0]].color);
             oThis._aAreas[oThis._iAreaIdx].setColor(getRandomColor());
             oThis._aAreas[oThis._iAreaIdx].setLabel(oThis._aAreas[oThis._aSelectedPosition[0]].label);
@@ -533,6 +602,30 @@ var Module = {};
             oThis._iAreaIdx++;
 
             _callOnCreated();
+        }
+
+        function getAreaId(sId) {
+            var sId = oThis._iAreaIdx;
+            while(true) {
+                if (oThis._aAreas.length === 0) {
+                    break;
+                }
+                var bFlag = false;
+                for (var iIdx in oThis._aAreas) {
+                    if (oThis._aAreas[iIdx].id.toString() === sId.toString()) {
+                        bFlag = true;
+                        break;
+                    }
+                }
+
+                if (bFlag === true) {
+                    sId++;
+                } else {
+                    break;
+                }
+            }
+
+            return sId;
         }
 
         function _setGuideLine(e) {

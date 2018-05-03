@@ -63,6 +63,7 @@ var Module = {};
 
     const KEYCODE_C = 67;
     const KEYCODE_G = 71;
+    const KEYCODE_Y = 89;
     const KEYCODE_Z = 90;
 
     $.canvasAreasDraw.prototype.init = function (oObj, oCustomOptions) {
@@ -117,6 +118,7 @@ var Module = {};
 
         // undo용 array
         this.undo = [];
+        this.redo = [];
 
         if ($(oObj).data('image-url') !== undefined) {
             this.oImage.src = $(oObj).attr('data-image-url');
@@ -133,6 +135,7 @@ var Module = {};
         }
 
         this._addAreaInfo = function (oArea) {
+            _saveUndo();
             if (oThis.status === 'drawing') {
                 oThis._aAreas.splice(oThis._iAreaIdx, 1);
             }
@@ -250,6 +253,7 @@ var Module = {};
             }
 
             if (oThis.keyCode.indexOf(KEYCODE_COMPLETE) !== -1 && oThis.status === 'drawing' && isObject(oThis._aAreas[oThis._iAreaIdx]) === true && oThis._aAreas[oThis._iAreaIdx].getLength() >= 3) {
+                _saveUndo();
                 oThis._aAreas[oThis._iAreaIdx].locations.push({
                     x: oThis._aAreas[oThis._iAreaIdx].locations[0].x,
                     y: oThis._aAreas[oThis._iAreaIdx].locations[0].y
@@ -266,6 +270,7 @@ var Module = {};
 
                 return false;
             } else if ((oThis.keyCode.indexOf(KEYCODE_SHIFT) !== -1 && oThis.keyCode.indexOf(KEYCODE_EQUAL) !== -1) || oThis.keyCode.indexOf(KEYCODE_KEYPAD_PLUS) !== -1) {
+                _saveUndo();
                 // 영역 머지
                 if (oThis._aActiveBlock.length >= 2) {
                     var aLocations = [];
@@ -296,6 +301,7 @@ var Module = {};
                     oThis.draw();
                 }
             } else if (oThis.keyCode.indexOf(KEYCODE_MINUS) !== -1 || oThis.keyCode.indexOf(KEYCODE_KEYPAD_MINUS) !== -1) {
+                _saveUndo();
                 // 영역 split
                 for (var iIdx = 0; iIdx < oThis._aActiveBlock.length; iIdx++) {
                     if (isObject(oThis._aAreas[oThis._aActiveBlock[iIdx]]) === false || getArrayDepth(oThis._aAreas[oThis._aActiveBlock[iIdx]].locations) < 2) {
@@ -339,7 +345,13 @@ var Module = {};
                     return false;
                 }
                 oThis.keyDownFlag = true;
-                console.log('undo');
+                _undoAction();
+            } else if (oThis.keyCode.indexOf(KEYCODE_CTRL) !== -1 && oThis.keyCode.indexOf(KEYCODE_Y) !== -1) {
+                if (oThis.keyDownFlag === true) {
+                    return false;
+                }
+                oThis.keyDownFlag = true;
+                _redoAction();
             } else if (oThis.keyCode.indexOf(KEYCODE_TAB) !== -1) {
                 e.preventDefault();
                 if (oThis.keyDownFlag === true) {
@@ -372,6 +384,7 @@ var Module = {};
                     return;
                 }
                 oThis.keyDownFlag = true;
+                _saveUndo();
                 var sColor = getRandomColor();
 
                 for (var iIdx in oThis._aActiveBlock) {
@@ -401,8 +414,9 @@ var Module = {};
                 if (oThis.keyDownFlag === true) {
                     return false;
                 }
-                grabcut(oThis);
                 oThis.keyDownFlag = true;
+                _saveUndo();
+                grabcut(oThis);
             } else if (oThis.keyCode.indexOf(KEYCODE_PRINT) !== -1) {
                 if (oThis.keyDownFlag === true) {
                     return false;
@@ -418,6 +432,42 @@ var Module = {};
             }
 
             //console.log(oThis.keyCode);
+        }
+
+        function _undoAction() {
+            if (oThis.undo.length === 0) {
+                return;
+            }
+
+            var oPrevStatus = oThis.undo.pop();
+            _saveRedo();
+
+            oThis._iAreaIdx = oPrevStatus.AreaIdx;
+            oThis._aActiveBlock = oPrevStatus.ActiveBlock.slice();
+            oThis.status = oPrevStatus.Status;
+            if (oThis.status === 'separating') {
+                oThis.status = 'ready';
+            }
+
+            oThis._aAreas = oPrevStatus.Areas;
+
+            oThis.draw();
+        }
+
+        function _redoAction() {
+            if (oThis.redo.length === 0) {
+                return;
+            }
+
+            var oNextStatus = oThis.redo.pop();
+
+            oThis._iAreaIdx = oNextStatus.AreaIdx;
+            oThis._aActiveBlock = oNextStatus.ActiveBlock.slice();
+            oThis.status = oNextStatus.Status;
+
+            oThis._aAreas = oNextStatus.Areas;
+
+            oThis.draw();
         }
 
         function moveAreaByArrowKey() {
@@ -443,6 +493,7 @@ var Module = {};
                 return false;
             }
 
+            _saveUndo();
             for (var iIdx in oThis._aActiveBlock) {
                 var iActive = parseInt(oThis._aActiveBlock[iIdx]);
 
@@ -515,6 +566,7 @@ var Module = {};
                         iGapY = Math.abs(aLocations[iIdx].y - finalPosition.y);
 
                         if (iGapX <= oThis.options.allowGapSize && iGapY <= oThis.options.allowGapSize) {
+                            _saveUndo();
                             oThis._separatingPosition[oThis._separatingPosition.length - 1] = aLocations[iIdx];
                             separate(iIdx);
                             break;
@@ -681,6 +733,7 @@ var Module = {};
                             var flagY = Math.abs(oTarget.y - oThis._aAreas[iIdx].locations[iIdx2][iIdx3].y);
 
                             if (flagX <= options.allowGapSize && flagY <= options.allowGapSize) {
+                                _saveUndo();
                                 var iEndIdx = oThis._aAreas[iIdx].locations[iIdx2].length - 1;
                                 var oCurPoint = oThis._aAreas[iIdx].locations[iIdx2][iIdx3];
                                 var oEndPoint = oThis._aAreas[iIdx].locations[iIdx2][iEndIdx];
@@ -720,6 +773,7 @@ var Module = {};
                         var flagY = Math.abs(oTarget.y - oThis._aAreas[iIdx].locations[iIdx2].y);
 
                         if (flagX <= options.allowGapSize && flagY <= options.allowGapSize) {
+                            _saveUndo();
                             var iEndIdx = oThis._aAreas[iIdx].getLength() - 1;
                             var oCurPoint = oThis._aAreas[iIdx].locations[iIdx2];
                             var oEndPoint = oThis._aAreas[iIdx].locations[iEndIdx];
@@ -988,6 +1042,7 @@ var Module = {};
 
                                 if (gapX <= options.allowGapSize && gapY <= options.allowGapSize) {
                                     if (findFlag === false && (key !== 0 || oThis.status === 'ready')) {
+                                        _saveUndo();
                                         canvas.addEventListener('mousemove', _movePoint, false);
                                         oThis._aSelectedPosition = [iAreaIdx, iLocationIdx, key];
 
@@ -1021,6 +1076,7 @@ var Module = {};
 
                                         oThis.draw();
                                     } else {
+                                        _saveUndo();
                                         canvas.addEventListener('mousemove', _movePoint, false);
                                     }
                                     oThis._aSelectedPosition = [iAreaIdx, key];
@@ -1045,6 +1101,7 @@ var Module = {};
                                 var iLength = oThis._aAreas[iAreaIdx].locations[iLocationIdx].length;
                                 for (var iIdx2 = 1; iIdx2 < iLength; iIdx2++) {
                                     if (_checkPointOnLine(oTarget, oThis._aAreas[iAreaIdx].locations[iLocationIdx][iIdx2 - 1], oThis._aAreas[iAreaIdx].locations[iLocationIdx][iIdx2]) === true) {
+                                        _saveUndo();
                                         oThis._aAreas[iAreaIdx].locations[iLocationIdx].splice(iIdx2, 0, oTarget);
                                         oThis._aAreas[iAreaIdx].isActive = true;
 
@@ -1057,6 +1114,7 @@ var Module = {};
                             var iLength = oThis._aAreas[iAreaIdx].locations.length;
                             for (var iIdx2 = 1; iIdx2 < iLength; iIdx2++) {
                                 if (_checkPointOnLine(oTarget, oThis._aAreas[iAreaIdx].locations[iIdx2 - 1], oThis._aAreas[iAreaIdx].locations[iIdx2]) === true) {
+                                    _saveUndo();
                                     oThis._aAreas[iAreaIdx].locations.splice(iIdx2, 0, oTarget);
                                     oThis._aAreas[iAreaIdx].isActive = true;
 
@@ -1082,6 +1140,7 @@ var Module = {};
 
                         _callOnSelected()
                         if (oThis.options.allowEdit === true) {
+                            _saveUndo();
                             canvas.addEventListener('mousemove', _moveRegion, false);
                         }
                         oThis.draw();
@@ -1099,6 +1158,7 @@ var Module = {};
                 return;
             }
 
+            _saveUndo();
             if (oThis.status === 'ready') {
                 for (; isObject(oThis._aAreas[oThis._iAreaIdx]) === true; oThis._iAreaIdx++) { }
                 oThis._aAreas[oThis._iAreaIdx] = new AreaStruct(oThis._iAreaIdx);
@@ -1355,6 +1415,67 @@ var Module = {};
             oThis.zoomLayer.css('display', 'none');
         }
 
+        function _saveUndo() {
+            oThis.redo = [];
+
+            var oCurrentStatus = _getCurrentStatus();
+
+            if (oThis.undo.length >= 100) {
+                oThis.undo.splice(0, 1);
+            }
+            oThis.undo.push(oCurrentStatus);
+        }
+
+        function _saveRedo() {
+            var oCurrentStatus = _getCurrentStatus();
+
+            if (oThis.redo.length >= 100) {
+                oThis.redo.splice(0, 1);
+            }
+            oThis.redo.push(oCurrentStatus);
+        }
+
+        function _getCurrentStatus() {
+            var aAreas = [];
+            for (var iIdx in oThis._aAreas) {
+                var aArea = new AreaStruct(oThis._aAreas[iIdx].id);
+                aArea.setColor(oThis._aAreas[iIdx].color);
+                aArea.label = oThis._aAreas[iIdx].label.slice();
+                aArea.isActive = oThis._aAreas[iIdx].isActive;
+
+                var locations = [];
+                if (getArrayDepth(oThis._aAreas[iIdx].locations) === 2) {
+                    for (var iIdx2 in oThis._aAreas[iIdx].locations) {
+                        var subLocations = [];
+                        for (var iIdx3 in oThis._aAreas[iIdx].locations[iIdx2]) {
+                            subLocations.push({
+                                x: oThis._aAreas[iIdx].locations[iIdx2][iIdx3].x,
+                                y: oThis._aAreas[iIdx].locations[iIdx2][iIdx3].y
+                            });
+                        }
+                        locations.push(subLocations);
+                    }
+                } else {
+                    for (var iIdx2 in oThis._aAreas[iIdx].locations) {
+                        locations.push({
+                            x: oThis._aAreas[iIdx].locations[iIdx2].x,
+                            y: oThis._aAreas[iIdx].locations[iIdx2].y
+                        });
+                    }
+                }
+                aArea.locations = locations;
+
+                aAreas.push(aArea);
+            }
+
+            return {
+                'Areas': aAreas,
+                'AreaIdx': oThis._iAreaIdx,
+                'ActiveBlock': oThis._aActiveBlock.slice(),
+                'Status': oThis.status
+            }
+        }
+
         this._callOnDeleted = function (iDeleteKey) {
             if (oThis.options.onDeleted !== null) {
                 oThis.options.onDeleted.call(this, iDeleteKey);
@@ -1491,9 +1612,9 @@ var Module = {};
                 }
 
                 if (oCurBlocks.isActive === false) {
-                    $('#trash-' + oCurBlocks.id).css('display', 'none');
+                    $('#trash-' + oCurBlocks.id).css('display', 'none').css('z-index', -1);
                 } else {
-                    $('#trash-' + oCurBlocks.id).css('display', 'block');
+                    $('#trash-' + oCurBlocks.id).css('display', 'block').css('z-index', 1);
                 }
             }
 
@@ -1599,11 +1720,27 @@ var Module = {};
                 var iLeft = aTargetPoints[iFindIdx].x + ctx.canvas.offsetLeft + 4;
                 var iTop = aTargetPoints[iFindIdx].y + ctx.canvas.offsetTop - 28;
 
+                $('.delete-area').each(function() {
+                    var aElementId = $(this).attr('id').split('-');
+
+                    var bFindFlag = false;
+                    for (iIdx in oThis._aAreas) {
+                        if (oThis._aAreas[iIdx].id.toString() === aElementId[1].toString()) {
+                            bFindFlag = true;
+                            break;
+                        }
+                    }
+
+                    if (bFindFlag === false) {
+                        $(this).remove();
+                    }
+                });
+
                 var div = $('#trash-' + iIndex);
                 if (div.length === 0) {
                     var div = $('<div>').addClass('delete-area').append(
                         $('<div>').addClass('select-areas-delete-area')
-                    ).css('left', iLeft).css('top', iTop).css('z-index', 1).attr('id', 'trash-' + iIndex).click(function () {
+                    ).css('left', iLeft).css('top', iTop).attr('id', 'trash-' + iIndex).click(function () {
                         var aElementId = $(this).attr('id').split('-');
 
                         _callOnDeleted(aElementId[1]);
@@ -1633,7 +1770,7 @@ var Module = {};
 
                     $(oThis.canvas).parent().append(div);
                 } else {
-                    div.css('left', iLeft).css('top', iTop).css('z-index', 1);
+                    div.css('left', iLeft).css('top', iTop);
                 }
             }
 

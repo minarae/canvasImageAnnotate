@@ -55,6 +55,8 @@ var Module = {};
     const KEYCODE_PRINT = 80;
     const KEYCODE_CANCEL = 27;
     const KEYCODE_TAB = 9;
+    const KEYCODE_BACKSPACE = 8;
+    const KEYCODE_DELETE = 46;
 
     const KEYCODE_ARROW_LEFT = 37;
     const KEYCODE_ARROW_UP = 38;
@@ -353,6 +355,7 @@ var Module = {};
                 oThis.keyDownFlag = true;
                 _redoAction();
             } else if (oThis.keyCode.indexOf(KEYCODE_TAB) !== -1) {
+                // FOCUS MOVE
                 e.preventDefault();
                 if (oThis.keyDownFlag === true) {
                     return false;
@@ -379,6 +382,9 @@ var Module = {};
                         oThis._aAreas[aIndexArray[idx]].isActive = false;
                     }
                 }
+            } else if (oThis.keyCode.indexOf(KEYCODE_BACKSPACE) !== -1 || oThis.keyCode.indexOf(KEYCODE_DELETE) !== -1) {
+                // DELETE ACTIVATION BLOCK
+                _deleteArea();
             } else if (oThis.keyCode.indexOf(KEYCODE_C) !== -1) {
                 if (oThis.keyDownFlag === true) {
                     return;
@@ -468,6 +474,19 @@ var Module = {};
             oThis._aAreas = oNextStatus.Areas;
 
             oThis.draw();
+        }
+
+        function _deleteArea() {
+            var iCnt = 0;
+            oThis._aActiveBlock.sort(compare);
+            for (var iIdx in oThis._aActiveBlock) {
+                var sId = oThis._aAreas[oThis._aActiveBlock[iIdx] - iCnt].id;
+                $('#trash-' + sId).remove();
+
+                oThis._aAreas.splice(oThis._aActiveBlock[iIdx] - iCnt, 1);
+                iCnt++;
+            }
+            oThis._aActiveBlock = [];
         }
 
         function moveAreaByArrowKey() {
@@ -598,7 +617,7 @@ var Module = {};
             var aLocations = oCurArea.locations;
 
             for (iIdx = iEnd; ; iIdx++) {
-                if (iIdx === iLength - 1) {
+                if (iIdx >= iLength - 1) {
                     iIdx = 0;
                 }
                 aFront.push({
@@ -609,10 +628,14 @@ var Module = {};
                 if (iIdx === iFront) {
                     break;
                 }
+
+                if (aFront.length > 1 && iIdx === iEnd) {
+                    return;
+                }
             }
 
             for (iIdx = iFront; ; iIdx++) {
-                if (iIdx === iLength - 1) {
+                if (iIdx >= iLength - 1) {
                     iIdx = 0;
                 }
                 aEnd.push({
@@ -622,6 +645,10 @@ var Module = {};
 
                 if (iIdx === iEnd) {
                     break;
+                }
+
+                if (aEnd.length > 1 && iIdx === iFront) {
+                    return;
                 }
             }
 
@@ -636,6 +663,10 @@ var Module = {};
                     x: separating[separating.length - iIdx - 1].x,
                     y: separating[separating.length - iIdx - 1].y
                 });
+            }
+
+            if (aFront.length <= 3 || aEnd.length <= 3) {
+                return;
             }
 
             oThis._aAreas[oThis._aSelectedPosition[0]].locations = aFront;
@@ -962,7 +993,6 @@ var Module = {};
                     break;
                 }
             }
-            console.log(oThis._aActiveBlock);
             oThis.mouseClickFlag = true;
             _callOnSelected();
 
@@ -1301,11 +1331,11 @@ var Module = {};
                 var oCurrent = aLocation[iCurrent];
                 var oPrev = aLocation[iPrev];
 
-                if (oTarget.y >= oPrev.y && oTarget.y >= oCurrent.y) {
+                if (oTarget.y >= oPrev.y && oTarget.y > oCurrent.y) {
                     continue;
                 }
 
-                if (oTarget.y <= oPrev.y && oTarget.y <= oCurrent.y) {
+                if (oTarget.y <= oPrev.y && oTarget.y < oCurrent.y) {
                     continue;
                 }
 
@@ -2141,7 +2171,7 @@ var Module = {};
         }
 
         var cs = MagicWand.traceContours(wandMask);
-        cs = MagicWand.simplifyContours(cs, 2, 0);
+        cs = MagicWand.simplifyContours(cs, 1, 0);
 
         //cv.imshow('canvasOutput', src);
 

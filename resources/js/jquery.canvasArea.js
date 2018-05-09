@@ -481,6 +481,7 @@ var Module = {};
             oThis._aActiveBlock.sort(compare);
             for (var iIdx in oThis._aActiveBlock) {
                 var sId = oThis._aAreas[oThis._aActiveBlock[iIdx] - iCnt].id;
+                oThis._callOnDeleted(sId);
                 $('#trash-' + sId).remove();
 
                 oThis._aAreas.splice(oThis._aActiveBlock[iIdx] - iCnt, 1);

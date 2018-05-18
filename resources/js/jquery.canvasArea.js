@@ -1325,40 +1325,19 @@ var Module = {};
         }
 
         function __checkInsideByLocations(oTarget, aLocation) {
-            var x = oTarget.x, y = oTarget.y;
-            var iCnt = 0;
+            var bResult = false;
+            var iLength = aLocation.length;
 
-            for (var iCurrent = 1, iPrev = 0; iCurrent < aLocation.length; iCurrent++, iPrev++) {
+            for (var iCurrent = 0, iPrev = iLength - 2; iCurrent < iLength - 1; iPrev = iCurrent++) {
                 var oCurrent = aLocation[iCurrent];
                 var oPrev = aLocation[iPrev];
 
-                if (oTarget.y >= oPrev.y && oTarget.y > oCurrent.y) {
-                    continue;
-                }
-
-                if (oTarget.y <= oPrev.y && oTarget.y < oCurrent.y) {
-                    continue;
-                }
-
-                var fAround;
-                if (oCurrent.x === oPrev.x) {
-                    fAround = oCurrent.x;
-                } else {
-                    var fInclination = (oCurrent.y - oPrev.y) / (oCurrent.x - oPrev.x);
-                    var fIntercept = oCurrent.y - (fInclination * oCurrent.x);
-
-                    fAround = (y - fIntercept) / fInclination;
-                }
-
-                if (x >= fAround) {
-                    iCnt++;
+                if (((oCurrent.y > oTarget.y) !== (oPrev.y > oTarget.y)) && (oTarget.x < (oPrev.x - oCurrent.x) * (oTarget.y - oCurrent.y) / (oPrev.y - oCurrent.y) + oCurrent.x)) {
+                    bResult = !bResult;
                 }
             }
-            if (iCnt === 0) {
-                return false;
-            } else if (iCnt % 2 === 1) {
-                return true;
-            }
+
+            return bResult;
         }
 
         function _callOnCreated() {
